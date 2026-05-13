@@ -93,7 +93,7 @@ def cmd_img2pdf(args):
 
 
 def cmd_md2pdf(args):
-    sys.path.insert(0, str(Path(__file__).parent))
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
     try:
         from generate_build_guide_pdf import build_pdf
     except Exception as e:

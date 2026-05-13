@@ -53,7 +53,7 @@ def _discover() -> tuple[list[str], dict[str, list[str]]]:
     top_level_completions = all categories + meta commands.
     Falls back to a static snapshot if tk cannot be imported.
     """
-    here = Path(__file__).resolve().parent
+    here = Path(__file__).resolve().parent.parent
     if str(here) not in sys.path:
         sys.path.insert(0, str(here))
 

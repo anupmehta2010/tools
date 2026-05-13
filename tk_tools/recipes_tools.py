@@ -24,7 +24,7 @@ import sys
 from collections import deque
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from _common import (
     recipe_save, recipe_load, recipe_list, recipe_delete, emit,
 )

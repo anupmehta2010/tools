@@ -21,7 +21,7 @@ import zipapp
 import zipfile
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent.parent
 
 
 COMMANDS = {

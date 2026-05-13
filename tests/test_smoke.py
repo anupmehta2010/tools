@@ -17,17 +17,23 @@ sys.path.insert(0, str(ROOT))
 
 
 CORE_MODULES = [
-    "_common", "convert_tools", "archive_tools", "crypto_tools", "data_tools",
-    "dev_tools", "fs_tools", "image_tools", "media_tools", "net_tools",
-    "oled_tools", "pdf_tools", "qr_tools", "text_tools",
+    "_common",
+    "tk_tools.convert_tools", "tk_tools.archive_tools", "tk_tools.crypto_tools",
+    "tk_tools.data_tools", "tk_tools.dev_tools", "tk_tools.fs_tools",
+    "tk_tools.image_tools", "tk_tools.media_tools", "tk_tools.net_tools",
+    "tk_tools.oled_tools", "tk_tools.pdf_tools", "tk_tools.qr_tools",
+    "tk_tools.text_tools",
 ]
 
 ADVANCED_MODULES = [
-    "ai_tools", "audiopro_tools", "code_tools", "cryptopro_tools", "db_tools",
-    "doc_tools", "embedded_tools", "finance_tools", "forensic_tools", "gen_tools",
-    "geo_tools", "imagepro_tools", "ml_tools", "netpro_tools", "pdfpro_tools",
-    "steg_tools", "threed_tools", "time_tools", "videopro_tools", "watch_tools",
-    "recipes_tools", "bundle_tools", "completions_tools",
+    "tk_tools.ai_tools", "tk_tools.audiopro_tools", "tk_tools.code_tools",
+    "tk_tools.cryptopro_tools", "tk_tools.db_tools", "tk_tools.doc_tools",
+    "tk_tools.embedded_tools", "tk_tools.finance_tools", "tk_tools.forensic_tools",
+    "tk_tools.gen_tools", "tk_tools.geo_tools", "tk_tools.imagepro_tools",
+    "tk_tools.ml_tools", "tk_tools.netpro_tools", "tk_tools.pdfpro_tools",
+    "tk_tools.steg_tools", "tk_tools.threed_tools", "tk_tools.time_tools",
+    "tk_tools.videopro_tools", "tk_tools.watch_tools",
+    "tk_tools.recipes_tools", "tk_tools.bundle_tools", "tk_tools.completions_tools",
 ]
 
 
