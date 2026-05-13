@@ -3,18 +3,37 @@
 #   pip install -r requirements.txt           # install everything
 #   pip install reportlab pypdf pillow        # only PDF + images
 #
-# External binaries (NOT pip-installable):
-#   - ffmpeg       https://ffmpeg.org   (required for media_tools.py)
+# External binaries (NOT pip-installable, install separately):
+#   - ffmpeg       https://ffmpeg.org              (media, audio-pro, video-pro)
+#   - pandoc       https://pandoc.org              (doc category)
+#   - tesseract    https://tesseract-ocr.github.io (pdf-pro: OCR)
+#   - qpdf         https://qpdf.sourceforge.io     (pdf-pro: linearize)
+#   - gpg          https://gnupg.org               (crypto-pro: gpg-encrypt)
+#   - age          https://age-encryption.org      (crypto-pro: age-encrypt)
+#   - prettier / black / gofmt / rustfmt           (code: format)
+#   - ollama       https://ollama.com              (ai: chat/summarize)
 
 # ---- PDF ----
 reportlab>=4.0
 pypdf>=4.0
 xhtml2pdf>=0.2.16
+pdfplumber>=0.11        # pdf-pro: table-extract
+ocrmypdf>=16.0          # pdf-pro: ocr (also wraps tesseract)
+pytesseract>=0.3.10     # pdf-pro: ocr fallback
+PyMuPDF>=1.24           # pdf-pro: redact, render
+pdf2image>=1.17         # pdf-pro: compare
 
 # ---- Images / QR ----
 Pillow>=10.0
 qrcode>=7.4
 pyzbar>=0.1.9
+rembg>=2.0              # image-pro: background removal
+opencv-python>=4.10     # image-pro: smart-crop, panorama, HDR, blur-face
+piexif>=1.1             # steg, geo: EXIF user-comment
+
+# ---- Audio / Video / Media ----
+librosa>=0.10           # audio-pro: BPM detect
+mutagen>=1.47           # forensic: audio metadata strip
 
 # ---- Data ----
 openpyxl>=3.1
@@ -23,3 +42,29 @@ tomli>=2.0;python_version<"3.11"
 
 # ---- Crypto ----
 cryptography>=42.0
+PyJWT>=2.8              # net-pro: jwt-verify
+mnemonic>=0.21          # crypto-pro: BIP39
+argon2-cffi>=23.1       # crypto-pro: argon2
+
+# ---- Network ----
+dnspython>=2.6          # net-pro: dns-lookup
+requests>=2.31          # optional convenience
+
+# ---- AI / ML ----
+faster-whisper>=1.0     # ai: stt, video-pro: auto-subtitle
+sentence-transformers>=2.7  # ai: embed, ml: embed-text
+onnxruntime>=1.18       # ml: onnx-run
+tiktoken>=0.7           # ml: tokenize
+open-clip-torch>=2.24   # ml: classify-image, embed-image
+pyttsx3>=2.90           # ai: tts fallback
+
+# ---- Time / Geo / Date ----
+python-dateutil>=2.9    # time: parse
+croniter>=2.0           # time: cron-next
+
+# ---- Embedded ----
+pyserial>=3.5           # embedded: serial-monitor, serial-list
+
+# ---- PDF-pro extras ----
+camelot-py[cv]>=0.11    # pdf-pro: table-extract
+pyhanko>=0.25           # pdf-pro: sign (visible+digital)

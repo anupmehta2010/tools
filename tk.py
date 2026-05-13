@@ -1,4 +1,4 @@
-"""tk - Personal Toolkit. All-in-one CLI launcher (and web UI).
+"""tk -- Personal Toolkit. All-in-one CLI launcher and web UI.
 
 Usage:
     python tk.py                         # interactive menu
@@ -7,33 +7,35 @@ Usage:
     python tk.py <category>              # show category subcommands
     python tk.py <category> <cmd> ...    # run a command
 
-Categories:
-    pdf      PDF: merge, split, extract, md/img/html -> pdf, compress, encrypt
-    image    Images: convert formats, resize, compress, watermark, ASCII, ...
-    media    Audio/Video (ffmpeg): convert, extract audio, trim, GIF, thumbnail
-    text     Encoding (b64/url/hex/html), hashes, case, JSON format, diff, ...
-    data     CSV/JSON/Excel/YAML/XML/TOML conversions
-    archive  ZIP/TAR/auto-extract
-    crypto   Passwords, UUID, file hash, JWT decode, Fernet encrypt/decrypt
-    net      HTTP, download, DNS, ping, port-scan, my-ip, whois, URL check
-    fs       Bulk rename, dedupe, search, disk usage, sysinfo, tree
-    dev      Regex, color, lorem, base, calc, timestamp, slug, curl-to-Python
-    qr       QR codes: generate (PNG/SVG/ASCII) and decode
-    oled     OLED & embedded: image/video -> C arrays, BMP, optimize for tiny screens
+Meta commands:
+    tk doctor                            # check optional deps and external tools
+    tk history                           # show recent runs
+    tk preset save NAME <cat> <cmd> ...  # save a command preset
+    tk preset list                       # list saved presets
+    tk preset run  NAME                  # re-run a saved preset
+    tk preset delete NAME                # delete a preset
+    tk pipe <cat:cmd args> >> <cat:cmd args> >> ...   # chain tools (workspace-relative)
+    tk plugins                           # list discovered plugins
+    tk version                           # print version
 
-Each tool also runs standalone: `python pdf_tools.py merge a.pdf b.pdf -o c.pdf`.
+Built-in categories: pdf, image, media, text, data, archive, crypto, net, fs,
+dev, qr, oled, convert, ai, doc, code, gen, time, finance, db, image-pro,
+audio-pro, video-pro, pdf-pro, geo, steg, net-pro, crypto-pro, forensic,
+embedded, ml, 3d.
 """
 from __future__ import annotations
 
 import importlib
+import json
 import shlex
 import sys
+import time
 from pathlib import Path
 
-# Make local module imports work regardless of CWD.
+# Local-module imports work regardless of CWD.
 sys.path.insert(0, str(Path(__file__).parent))
 
-# UTF-8 console on Windows so box chars / arrows render.
+# UTF-8 console on Windows.
 if sys.platform.startswith("win"):
     try:
         sys.stdout.reconfigure(encoding="utf-8")
@@ -41,65 +43,331 @@ if sys.platform.startswith("win"):
         pass
 
 
-CATEGORIES: dict[str, tuple[str, str]] = {
-    "pdf":     ("pdf_tools",     "PDF: merge, split, extract, md/img/html->pdf, compress"),
-    "image":   ("image_tools",   "Image: convert, resize, compress, watermark, ASCII art"),
-    "media":   ("media_tools",   "Audio/Video via ffmpeg: convert, trim, GIF, thumbnail"),
-    "text":    ("text_tools",    "Encoding, hashes, case conversion, JSON format, diff"),
-    "data":    ("data_tools",    "CSV/JSON/Excel/YAML/XML/TOML conversions"),
-    "archive": ("archive_tools", "Archives: zip/tar create + extract"),
-    "crypto":  ("crypto_tools",  "Passwords, UUIDs, file hash, JWT, Fernet encrypt"),
-    "net":     ("net_tools",     "HTTP, DNS, ping, port-scan, download, my-ip, whois"),
-    "fs":      ("fs_tools",      "Bulk rename, dedupe, search, disk usage, sysinfo"),
-    "dev":     ("dev_tools",     "Regex, color, lorem, base, calc, timestamp, slug"),
-    "qr":      ("qr_tools",      "QR codes: generate and decode"),
-    "oled":    ("oled_tools",    "OLED & embedded: img/video -> C arrays, BMP, opt"),
-    "convert": ("convert_tools", "Universal converter: auto-route by file extension"),
+__version__ = "0.2.0"
+
+
+# Built-in categories. Keys are stable URL/CLI slugs; values describe + map.
+CATEGORIES: dict[str, tuple[str, str, str]] = {
+    # key:         (module,             label / desc,                                 icon)
+    "pdf":         ("pdf_tools",        "PDF: merge, split, extract, md/img/html->pdf, compress", "📄"),
+    "image":       ("image_tools",      "Image: convert, resize, compress, watermark, ASCII art", "🖼️"),
+    "media":       ("media_tools",      "Audio/Video via ffmpeg: convert, trim, GIF, thumbnail",  "🎬"),
+    "text":        ("text_tools",       "Encoding, hashes, case conversion, JSON format, diff",   "✍️"),
+    "data":        ("data_tools",       "CSV/JSON/Excel/YAML/XML/TOML conversions",               "📊"),
+    "archive":     ("archive_tools",    "Archives: zip/tar create + extract",                     "📦"),
+    "crypto":      ("crypto_tools",     "Passwords, UUIDs, file hash, JWT, Fernet encrypt",       "🔐"),
+    "net":         ("net_tools",        "HTTP, DNS, ping, port-scan, download, my-ip, whois",     "🌐"),
+    "fs":          ("fs_tools",         "Bulk rename, dedupe, search, disk usage, sysinfo",       "📁"),
+    "dev":         ("dev_tools",        "Regex, color, lorem, base, calc, timestamp, slug",       "⚙️"),
+    "qr":          ("qr_tools",         "QR codes: generate and decode",                          "📱"),
+    "oled":        ("oled_tools",       "OLED & embedded: img/video -> C arrays, BMP, opt",       "💡"),
+    "convert":     ("convert_tools",    "Universal converter: auto-route by file extension",      "🔄"),
+    # New advanced categories (added in v0.2)
+    "ai":          ("ai_tools",         "Local AI: summarize, chat (ollama), STT, TTS, rembg, embed", "🤖"),
+    "doc":         ("doc_tools",        "Documents: md/docx/html/pdf/epub conversions (pandoc)",  "📝"),
+    "code":        ("code_tools",       "Code: format, sloc, complexity, secrets-scan, deps",     "</>"),
+    "gen":         ("gen_tools",        "Generators: favicon, app-icon, og-image, gitignore, sitemap, readme", "✨"),
+    "time":        ("time_tools",       "Time: tz convert, cron explain, ics gen, duration calc", "⏱️"),
+    "finance":     ("finance_tools",    "Finance: currency convert, invoice, tax, loan, compound", "💰"),
+    "db":          ("db_tools",         "SQLite: query, csv import/export, schema, vacuum",        "🗃️"),
+    "image-pro":   ("imagepro_tools",   "Image-pro: rembg, EXIF, palette, smart-crop, upscale, panorama, HDR", "🎨"),
+    "audio-pro":   ("audiopro_tools",   "Audio-pro: normalize, denoise, BPM, spectrogram, stems",  "🎚️"),
+    "video-pro":   ("videopro_tools",   "Video-pro: scene split, subtitle burn/auto, stabilize",   "🎞️"),
+    "pdf-pro":     ("pdfpro_tools",     "PDF-pro: OCR, redact, sign, tables, forms, compare",      "📑"),
+    "geo":         ("geo_tools",        "Geo: gpx/kml, distance, geocode, exif-gps, bbox",         "🗺️"),
+    "steg":        ("steg_tools",       "Steganography: LSB image/audio embed/extract",            "🕵️"),
+    "net-pro":     ("netpro_tools",     "Net-pro: SSL, headers, JWT verify, HAR, traceroute, speedtest", "🛰️"),
+    "crypto-pro":  ("cryptopro_tools",  "Crypto-pro: age, GPG, SSH keygen, BIP39, ECDSA, X.509, TOTP", "🔏"),
+    "forensic":    ("forensic_tools",   "Forensic: magic, entropy, strings, hexdump, carve, PE",   "🔬"),
+    "embedded":    ("embedded_tools",   "Embedded: hex, intel-hex, bin↔C, font→bmp, serial, CRC",  "🔌"),
+    "ml":          ("ml_tools",         "ML: ONNX run, classify, embed, tokenize, vector search", "🧠"),
+    "3d":          ("threed_tools",     "3D: obj/stl/ply, gcode info, decimate, voxelize, bbox",   "🧊"),
 }
 
+
+# ---------------------------------------------------------------- module loading
 
 def _load(module_name: str):
     return importlib.import_module(module_name)
 
 
+def available_categories() -> dict[str, tuple[str, str, str]]:
+    """Built-in + plugin categories, merged."""
+    from _common import discover_plugins
+    out = dict(CATEGORIES)
+    for key, info in discover_plugins().items():
+        if key not in out:
+            out[key] = (info["module"], info["label"], info["icon"])
+    return out
+
+
 def run_category(category: str, argv: list[str]) -> int:
-    mod_name, _ = CATEGORIES[category]
-    mod = _load(mod_name)
-    if hasattr(mod, "main"):
-        return mod.main(argv) or 0
-    print(f"Module {mod_name} has no main() entry.")
-    return 1
+    cats = available_categories()
+    if category not in cats:
+        print(f"Unknown category: {category}")
+        print(f"Categories: {', '.join(cats)}")
+        return 1
+    mod_name, _, _ = cats[category]
+    try:
+        mod = _load(mod_name)
+    except Exception as e:
+        print(f"Could not import module '{mod_name}': {e}")
+        return 1
+    if not hasattr(mod, "main"):
+        print(f"Module {mod_name} has no main() entry.")
+        return 1
+
+    # Run + log to history.
+    from _common import log_run, load_config
+    cfg = load_config()
+    cmd = argv[0] if argv else ""
+    t0 = time.time()
+    try:
+        rc = mod.main(argv) or 0
+    except SystemExit as e:
+        rc = e.code if isinstance(e.code, int) else 1
+    except KeyboardInterrupt:
+        rc = 130
+    except Exception as e:
+        print(f"Error: {e}")
+        rc = 1
+    dt = int((time.time() - t0) * 1000)
+    if cfg.get("history_enabled", True):
+        try:
+            log_run(category, cmd, argv[1:], rc, dt)
+        except Exception:
+            pass
+    return rc
 
 
-def list_all() -> None:
+def list_all(as_json: bool = False) -> None:
+    cats = available_categories()
+    if as_json:
+        out = []
+        for key, (mod_name, desc, icon) in cats.items():
+            cmds = []
+            try:
+                mod = _load(mod_name)
+                if hasattr(mod, "COMMANDS"):
+                    for n, info in mod.COMMANDS.items():
+                        cmds.append({"name": n, "help": info if isinstance(info, str) else ""})
+            except Exception:
+                pass
+            out.append({"key": key, "module": mod_name, "label": desc, "icon": icon, "commands": cmds})
+        print(json.dumps({"categories": out}, indent=2))
+        return
+
     print()
-    for cat, (mod_name, desc) in CATEGORIES.items():
-        print(f"[{cat}] {desc}  ({mod_name}.py)")
+    for cat, (mod_name, desc, icon) in cats.items():
+        print(f"{icon}  [{cat}] {desc}  ({mod_name}.py)")
         try:
             mod = _load(mod_name)
             if hasattr(mod, "COMMANDS"):
                 for name, info in mod.COMMANDS.items():
                     cmd_desc = info if isinstance(info, str) else (info[1] if len(info) > 1 else "")
-                    print(f"    {name:<16s} {cmd_desc}")
+                    print(f"    {name:<20s} {cmd_desc}")
         except Exception as e:
             print(f"    (could not load: {e})")
         print()
 
 
+# ---------------------------------------------------------------- meta: doctor
+
+def cmd_doctor() -> int:
+    from _common import have_module, have_binary, HOME_DIR, CONFIG_FILE, HISTORY_DB
+    print()
+    print("tk doctor — environment check")
+    print("=" * 50)
+    print(f"Python:           {sys.version.split()[0]}  ({sys.executable})")
+    print(f"Platform:         {sys.platform}")
+    print(f"tk home:          {HOME_DIR}")
+    print(f"  config:         {CONFIG_FILE.exists()}  ({CONFIG_FILE})")
+    print(f"  history db:     {HISTORY_DB.exists()}  ({HISTORY_DB})")
+    print()
+
+    py_mods = [
+        ("pypdf", "PDF reading/writing"),
+        ("PIL", "Pillow — image processing"),
+        ("reportlab", "PDF generation"),
+        ("markdown", "Markdown → HTML"),
+        ("openpyxl", "Excel files"),
+        ("yaml", "PyYAML — YAML"),
+        ("tomli", "TOML reader (py<3.11)"),
+        ("cryptography", "Fernet, X.509, signing"),
+        ("requests", "Optional HTTP"),
+        ("dns", "dnspython — DNS"),
+        ("jwt", "PyJWT — JWT verify/sign"),
+        ("qrcode", "QR generation"),
+        ("pyzbar", "QR decode"),
+        ("librosa", "Audio analysis"),
+        ("rembg", "Background removal"),
+        ("cv2", "OpenCV — image/video pro"),
+        ("onnxruntime", "ONNX inference"),
+        ("sentence_transformers", "Text embeddings"),
+        ("faster_whisper", "Speech-to-text"),
+        ("serial", "pyserial — serial port"),
+        ("croniter", "Cron next-fire"),
+        ("dateutil", "Date parsing"),
+        ("camelot", "PDF table extract"),
+        ("ocrmypdf", "PDF OCR"),
+        ("pytesseract", "Tesseract wrapper"),
+    ]
+    bins = ["ffmpeg", "ffprobe", "pandoc", "tesseract", "gpg", "age", "qpdf"]
+
+    print("Optional Python modules:")
+    for mod, desc in py_mods:
+        mark = "✔" if have_module(mod) else "·"
+        print(f"  {mark}  {mod:<25s} {desc}")
+    print()
+    print("Optional external binaries:")
+    for b in bins:
+        mark = "✔" if have_binary(b) else "·"
+        print(f"  {mark}  {b}")
+    print()
+    print("(✔ = installed, · = missing — install only what you need.)")
+    return 0
+
+
+# ---------------------------------------------------------------- meta: history
+
+def cmd_history(limit: int, as_json: bool) -> int:
+    from _common import recent_runs
+    rows = recent_runs(limit)
+    if as_json:
+        print(json.dumps(rows, indent=2))
+        return 0
+    if not rows:
+        print("No runs logged yet.")
+        return 0
+    print(f"{'#':>4}  {'when':<20s}  {'cat':<10s}  {'cmd':<14s}  rc  ms     args")
+    print("-" * 110)
+    for r in rows:
+        t = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(r["ts"]))
+        args = " ".join(r["args"])[:60]
+        print(f"{r['id']:>4}  {t:<20s}  {r['category']:<10s}  {r['command']:<14s}  "
+              f"{r['rc']:>2d}  {r['duration_ms']:>5d}  {args}")
+    return 0
+
+
+# ---------------------------------------------------------------- meta: preset
+
+def cmd_preset(argv: list[str]) -> int:
+    from _common import preset_save, preset_load, preset_list, preset_delete
+    if not argv:
+        print("Usage: tk preset save|list|run|delete|show ...")
+        return 1
+    op = argv[0]
+    if op == "save":
+        # tk preset save NAME <cat> <cmd> [args...]
+        if len(argv) < 4:
+            print("Usage: tk preset save NAME <category> <command> [args...]")
+            return 1
+        name, cat, cmd, *rest = argv[1:]
+        path = preset_save(name, cat, cmd, rest)
+        print(f"Saved preset '{name}' -> {path}")
+        return 0
+    if op == "list":
+        rows = preset_list()
+        if not rows:
+            print("No presets saved.")
+            return 0
+        for r in rows:
+            args = " ".join(r["args"])
+            print(f"  {r['name']:<20s}  {r['category']:<10s} {r['command']:<14s} {args}")
+        return 0
+    if op == "show":
+        if len(argv) < 2:
+            print("Usage: tk preset show NAME")
+            return 1
+        p = preset_load(argv[1])
+        if not p:
+            print(f"Preset '{argv[1]}' not found.")
+            return 1
+        print(json.dumps(p, indent=2))
+        return 0
+    if op == "run":
+        if len(argv) < 2:
+            print("Usage: tk preset run NAME [extra-args...]")
+            return 1
+        p = preset_load(argv[1])
+        if not p:
+            print(f"Preset '{argv[1]}' not found.")
+            return 1
+        full = [p["command"]] + list(p.get("args", [])) + list(argv[2:])
+        return run_category(p["category"], full)
+    if op == "delete":
+        if len(argv) < 2:
+            print("Usage: tk preset delete NAME")
+            return 1
+        ok = preset_delete(argv[1])
+        print("Deleted." if ok else "Not found.")
+        return 0 if ok else 1
+    print(f"Unknown preset op: {op}")
+    return 1
+
+
+# ---------------------------------------------------------------- meta: pipe
+
+def cmd_pipe(argv: list[str]) -> int:
+    """Run multiple tools sequentially. Steps separated by '>>'.
+
+    Each step: '<category>:<command> [args...]'
+    Example: tk pipe "image:resize in.png --width 800 -o a.png" >> "image:watermark a.png -o b.png --text hi"
+    """
+    if not argv:
+        print('Usage: tk pipe "<cat>:<cmd> args" >> "<cat>:<cmd> args" ...')
+        return 1
+    full = " ".join(argv)
+    steps = [s.strip() for s in full.split(">>") if s.strip()]
+    rc = 0
+    for i, step in enumerate(steps, 1):
+        tokens = shlex.split(step)
+        head = tokens[0]
+        if ":" not in head:
+            print(f"[pipe] step {i}: expected 'cat:cmd', got '{head}'")
+            return 1
+        cat, _, cmd = head.partition(":")
+        print(f"\n[pipe {i}/{len(steps)}] {cat} {cmd} {' '.join(tokens[1:])}")
+        rc = run_category(cat, [cmd] + tokens[1:])
+        if rc != 0:
+            print(f"[pipe] step {i} failed (rc={rc}); stopping.")
+            return rc
+    print(f"\n[pipe] all {len(steps)} steps OK.")
+    return 0
+
+
+# ---------------------------------------------------------------- meta: plugins
+
+def cmd_plugins() -> int:
+    from _common import discover_plugins, PLUGINS_DIR, LOCAL_PLUGINS_DIR
+    plugins = discover_plugins()
+    print(f"Plugin search dirs:\n  {PLUGINS_DIR}\n  {LOCAL_PLUGINS_DIR}\n")
+    if not plugins:
+        print("No plugins found.")
+        return 0
+    for key, info in plugins.items():
+        print(f"  {info['icon']}  {key:<14s} {info['label']}  ({info['path']})")
+    return 0
+
+
+# ---------------------------------------------------------------- menu
+
 def menu() -> int:
     print()
     print("==========================================================")
-    print("   tk -- Personal Toolkit                                 ")
+    print(f"   tk -- Personal Toolkit  v{__version__}")
     print("==========================================================")
-    keys = list(CATEGORIES.keys())
-
+    cats = available_categories()
+    keys = list(cats.keys())
     while True:
         print()
         for i, key in enumerate(keys, 1):
-            _, desc = CATEGORIES[key]
-            print(f"  {i:2d}. {key:<8s}  {desc}")
+            _, desc, icon = cats[key]
+            print(f"  {i:2d}. {icon}  {key:<11s}  {desc}")
         print("   l. List every available command")
-        print("   u. Launch web UI (browser)")
+        print("   u. Launch web UI")
+        print("   d. Doctor (check deps)")
+        print("   h. Show history")
         print("   q. Quit")
         print()
         try:
@@ -115,6 +383,12 @@ def menu() -> int:
         if sel in ("u", "ui", "web"):
             import server
             return server.main([])
+        if sel == "d":
+            cmd_doctor()
+            continue
+        if sel == "h":
+            cmd_history(20, False)
+            continue
         if sel.isdigit() and 1 <= int(sel) <= len(keys):
             cat = keys[int(sel) - 1]
         elif sel in keys:
@@ -122,12 +396,10 @@ def menu() -> int:
         else:
             print(f"  Unknown: {sel!r}")
             continue
-
         try:
             cmd_str = input(f"  $ {cat} ").strip()
         except (EOFError, KeyboardInterrupt):
             return 0
-
         argv = shlex.split(cmd_str) if cmd_str else ["--help"]
         try:
             run_category(cat, argv)
@@ -135,30 +407,52 @@ def menu() -> int:
             pass
         except KeyboardInterrupt:
             print("  (interrupted)")
-        except Exception as e:
-            print(f"  Error: {e}")
 
+
+# ---------------------------------------------------------------- entry
 
 def main(argv: list[str] | None = None) -> int:
-    argv = argv if argv is not None else sys.argv[1:]
+    argv = list(argv if argv is not None else sys.argv[1:])
+
+    # Global --json flag for list output
+    as_json = False
+    if "--json" in argv:
+        as_json = True
+        argv.remove("--json")
+
     if not argv:
         return menu()
-    if argv[0] in ("-h", "--help", "help"):
+
+    head = argv[0]
+    if head in ("-h", "--help", "help"):
         print(__doc__)
-        list_all()
+        list_all(as_json)
         return 0
-    if argv[0] == "list":
-        list_all()
+    if head in ("-v", "--version", "version"):
+        print(f"tk {__version__}")
         return 0
-    if argv[0] in ("ui", "web", "server"):
+    if head == "list":
+        list_all(as_json)
+        return 0
+    if head in ("ui", "web", "server"):
         import server
         return server.main(argv[1:])
-    cat = argv[0]
-    if cat not in CATEGORIES:
-        print(f"Unknown category: {cat}")
-        print(f"Categories: {', '.join(CATEGORIES)}")
-        return 1
-    return run_category(cat, argv[1:])
+    if head == "doctor":
+        return cmd_doctor()
+    if head == "history":
+        limit = 50
+        for a in argv[1:]:
+            if a.isdigit():
+                limit = int(a)
+        return cmd_history(limit, as_json)
+    if head == "preset":
+        return cmd_preset(argv[1:])
+    if head == "pipe":
+        return cmd_pipe(argv[1:])
+    if head == "plugins":
+        return cmd_plugins()
+
+    return run_category(head, argv[1:])
 
 
 if __name__ == "__main__":

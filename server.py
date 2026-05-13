@@ -1,12 +1,31 @@
-"""Web UI server for the toolkit. Pure stdlib HTTP server (no Flask/FastAPI required).
+"""Web UI server for the toolkit. Pure stdlib HTTP server.
 
-Run:
-    python server.py             # http://127.0.0.1:8765/
-    python server.py --port 9000
-    python server.py --host 0.0.0.0 --no-browser
-
-Or via the launcher:
-    python tk.py ui
+Endpoints:
+    GET  /                                  -> index.html
+    GET  /static/*                          -> web/* assets
+    GET  /api/categories                    -> list categories + commands (incl. plugins)
+    GET  /api/schema/<cat>/<cmd>            -> argparse schema for a command
+    POST /api/run                           -> run synchronously, returns full result
+    POST /api/run-async                     -> start a background job, returns {id}
+    GET  /api/jobs                          -> list known jobs
+    GET  /api/jobs/<id>                     -> snapshot of a job
+    GET  /api/jobs/<id>/events              -> SSE stream of job events
+    DELETE /api/jobs/<id>                   -> cancel a job
+    POST /api/batch                         -> run a command across N input files
+    GET  /api/files                         -> list workspace
+    GET  /api/files/<name>                  -> download
+    DELETE /api/files/<name>                -> remove
+    POST /api/upload                        -> multipart upload
+    POST /api/clear                         -> wipe workspace
+    GET  /api/presets                       -> list saved presets
+    POST /api/presets                       -> save preset
+    DELETE /api/presets/<name>              -> delete preset
+    GET  /api/history?limit=N               -> recent runs
+    GET  /api/doctor                        -> environment report (JSON)
+    GET  /api/themes                        -> bundled theme list
+    GET  /api/config                        -> read config
+    POST /api/config                        -> write config
+    GET  /api/version                       -> version string
 """
 from __future__ import annotations
 
@@ -18,12 +37,16 @@ import io
 import json
 import mimetypes
 import os
+import queue
 import re
+import shutil
 import socketserver
 import sys
 import threading
+import time
 import traceback
 import urllib.parse
+import uuid
 import webbrowser
 from pathlib import Path
 
@@ -36,27 +59,45 @@ WORKSPACE.mkdir(exist_ok=True)
 
 sys.path.insert(0, str(ROOT))
 
+try:
+    import tk as _tk
+except Exception:
+    _tk = None
 
-CATEGORIES = {
-    "pdf":     {"module": "pdf_tools",     "label": "PDF",                "icon": "📄"},
-    "image":   {"module": "image_tools",   "label": "Image",              "icon": "🖼️"},
-    "media":   {"module": "media_tools",   "label": "Audio / Video",      "icon": "🎬"},
-    "text":    {"module": "text_tools",    "label": "Text & Encoding",    "icon": "✍️"},
-    "data":    {"module": "data_tools",    "label": "Data Conversion",    "icon": "📊"},
-    "archive": {"module": "archive_tools", "label": "Archives",           "icon": "📦"},
-    "crypto":  {"module": "crypto_tools",  "label": "Crypto & Security",  "icon": "🔐"},
-    "net":     {"module": "net_tools",     "label": "Network",            "icon": "🌐"},
-    "fs":      {"module": "fs_tools",      "label": "Filesystem",         "icon": "📁"},
-    "dev":     {"module": "dev_tools",     "label": "Dev Utilities",      "icon": "⚙️"},
-    "qr":      {"module": "qr_tools",      "label": "QR Codes",           "icon": "📱"},
-    "oled":    {"module": "oled_tools",    "label": "OLED & Embedded",    "icon": "💡"},
-    "convert": {"module": "convert_tools", "label": "Universal Convert",   "icon": "🔄"},
-}
+
+def _build_categories() -> dict[str, dict]:
+    """Pull category list from tk.py (built-in + plugins)."""
+    if _tk and hasattr(_tk, "available_categories"):
+        cats = _tk.available_categories()
+    elif _tk:
+        cats = _tk.CATEGORIES
+    else:
+        cats = {}
+    out: dict[str, dict] = {}
+    for key, val in cats.items():
+        if isinstance(val, tuple) and len(val) >= 3:
+            module, label, icon = val[0], val[1], val[2]
+        elif isinstance(val, tuple) and len(val) == 2:
+            module, label = val
+            icon = "🔧"
+        elif isinstance(val, dict):
+            module = val.get("module")
+            label = val.get("label", key)
+            icon = val.get("icon", "🔧")
+        else:
+            continue
+        out[key] = {"module": module, "label": label, "icon": icon}
+    return out
+
+
+def get_categories() -> dict[str, dict]:
+    return _build_categories()
+
 
 _run_lock = threading.Lock()
 
 
-# ------------------------------- Schema introspection ----------------------------
+# ============================================================ schema introspection
 
 def _safe_default(v):
     if v is _ap.SUPPRESS:
@@ -88,7 +129,7 @@ def _parser_to_schema(parser):
         if isinstance(action, (_ap._StoreTrueAction, _ap._StoreFalseAction)):
             type_name = "bool"
         likely_file = False
-        if positional and action.dest in {"input", "inputs", "a", "b", "src", "sources"}:
+        if positional and action.dest in {"input", "inputs", "a", "b", "src", "sources", "file", "files", "path"}:
             likely_file = True
         if not positional and any(f in {"-i", "--input"} for f in flags):
             likely_file = True
@@ -114,12 +155,15 @@ def _parser_to_schema(parser):
 
 
 def get_command_schema(category, command):
-    info = CATEGORIES.get(category)
+    cats = get_categories()
+    info = cats.get(category)
     if not info:
         return None
     try:
         mod = importlib.import_module(info["module"])
     except Exception:
+        return None
+    if not hasattr(mod, "build_parser"):
         return None
     parser = mod.build_parser()
     for action in parser._actions:
@@ -131,7 +175,8 @@ def get_command_schema(category, command):
 
 
 def list_commands(category):
-    info = CATEGORIES.get(category)
+    cats = get_categories()
+    info = cats.get(category)
     if not info:
         return []
     try:
@@ -139,19 +184,20 @@ def list_commands(category):
     except Exception as e:
         return [{"error": str(e)}]
     cmds = getattr(mod, "COMMANDS", {})
-    return [{"name": k, "help": v} for k, v in cmds.items()]
+    return [{"name": k, "help": v if isinstance(v, str) else (v[1] if len(v) > 1 else "")} for k, v in cmds.items()]
 
 
-# --------------------------------- Tool runner -----------------------------------
+# ============================================================ sync tool runner
 
 def run_tool(category, command, args_list):
-    info = CATEGORIES.get(category)
+    cats = get_categories()
+    info = cats.get(category)
     if not info:
-        return {"rc": 1, "stdout": "", "stderr": "unknown category", "new_files": []}
+        return {"rc": 1, "stdout": "", "stderr": "unknown category", "new_files": [], "new_dirs": []}
     try:
         mod = importlib.import_module(info["module"])
     except Exception as e:
-        return {"rc": 1, "stdout": "", "stderr": f"Could not import {info['module']}: {e}", "new_files": []}
+        return {"rc": 1, "stdout": "", "stderr": f"Could not import {info['module']}: {e}", "new_files": [], "new_dirs": []}
 
     with _run_lock:
         before = {p.name for p in WORKSPACE.iterdir() if p.is_file()}
@@ -187,18 +233,144 @@ def run_tool(category, command, args_list):
     }
 
 
+# ============================================================ async jobs (SSE)
+
+class Job:
+    def __init__(self, category: str, command: str, args: list[str]):
+        self.id = uuid.uuid4().hex[:12]
+        self.category = category
+        self.command = command
+        self.args = args
+        self.state = "queued"  # queued | running | done | error | cancelled
+        self.rc: int | None = None
+        self.stdout = ""
+        self.stderr = ""
+        self.new_files: list[str] = []
+        self.new_dirs: list[str] = []
+        self.started_at: float | None = None
+        self.finished_at: float | None = None
+        self.events: queue.Queue = queue.Queue()  # SSE event stream
+        self._cancel = threading.Event()
+
+    def snapshot(self) -> dict:
+        return {
+            "id": self.id,
+            "category": self.category,
+            "command": self.command,
+            "args": self.args,
+            "state": self.state,
+            "rc": self.rc,
+            "stdout": self.stdout,
+            "stderr": self.stderr,
+            "new_files": self.new_files,
+            "new_dirs": self.new_dirs,
+            "started_at": self.started_at,
+            "finished_at": self.finished_at,
+        }
+
+
+_jobs: dict[str, Job] = {}
+_jobs_lock = threading.Lock()
+
+
+def _job_emit(job: Job, kind: str, data):
+    job.events.put({"event": kind, "data": data})
+
+
+def _run_job(job: Job):
+    job.state = "running"
+    job.started_at = time.time()
+    _job_emit(job, "state", {"state": "running"})
+
+    cats = get_categories()
+    info = cats.get(job.category)
+    if not info:
+        job.state = "error"
+        job.rc = 1
+        job.stderr = "unknown category"
+        job.finished_at = time.time()
+        _job_emit(job, "done", job.snapshot())
+        return
+
+    try:
+        mod = importlib.import_module(info["module"])
+    except Exception as e:
+        job.state = "error"
+        job.rc = 1
+        job.stderr = f"Could not import {info['module']}: {e}"
+        job.finished_at = time.time()
+        _job_emit(job, "done", job.snapshot())
+        return
+
+    class _StreamSink(io.StringIO):
+        def __init__(self, kind: str):
+            super().__init__()
+            self.kind = kind
+            self._lock = threading.Lock()
+        def write(self, s):
+            if not s:
+                return 0
+            with self._lock:
+                n = super().write(s)
+            _job_emit(job, self.kind, s)
+            return n
+
+    out_sink = _StreamSink("stdout")
+    err_sink = _StreamSink("stderr")
+    before = {p.name for p in WORKSPACE.iterdir() if p.is_file()}
+    before_dirs = {p.name for p in WORKSPACE.iterdir() if p.is_dir()}
+    cwd_before = os.getcwd()
+    rc = 0
+    try:
+        os.chdir(WORKSPACE)
+        with contextlib.redirect_stdout(out_sink), contextlib.redirect_stderr(err_sink):
+            try:
+                rc = mod.main([job.command] + list(job.args)) or 0
+            except SystemExit as e:
+                rc = e.code if isinstance(e.code, int) else 1
+            except Exception as e:
+                err_sink.write(f"Error: {e}\n")
+                err_sink.write(traceback.format_exc())
+                rc = 1
+    finally:
+        os.chdir(cwd_before)
+
+    job.stdout = out_sink.getvalue()
+    job.stderr = err_sink.getvalue()
+    job.rc = rc
+    after = {p.name for p in WORKSPACE.iterdir() if p.is_file()}
+    after_dirs = {p.name for p in WORKSPACE.iterdir() if p.is_dir()}
+    job.new_files = sorted(after - before)
+    job.new_dirs = sorted(after_dirs - before_dirs)
+    job.state = "done" if rc == 0 else "error"
+    job.finished_at = time.time()
+    _job_emit(job, "done", job.snapshot())
+
+
+def start_async_job(category: str, command: str, args: list[str]) -> Job:
+    job = Job(category, command, args)
+    with _jobs_lock:
+        _jobs[job.id] = job
+        # Trim old jobs (>50).
+        if len(_jobs) > 50:
+            for old_id in sorted(_jobs, key=lambda i: _jobs[i].started_at or 0)[: len(_jobs) - 50]:
+                _jobs.pop(old_id, None)
+    threading.Thread(target=_run_job, args=(job,), daemon=True).start()
+    return job
+
+
+# ============================================================ workspace helpers
+
 def list_workspace_files():
     files = []
     for p in sorted(WORKSPACE.iterdir(), key=lambda x: x.name.lower()):
         if p.is_file():
-            files.append({"name": p.name, "size": p.stat().st_size, "kind": "file"})
+            files.append({"name": p.name, "size": p.stat().st_size, "kind": "file", "mtime": p.stat().st_mtime})
         elif p.is_dir():
             count = sum(1 for _ in p.rglob("*") if _.is_file())
-            files.append({"name": p.name, "size": count, "kind": "dir"})
+            files.append({"name": p.name, "size": count, "kind": "dir", "mtime": p.stat().st_mtime})
     return files
 
-
-# --------------------------------- Multipart -------------------------------------
 
 def parse_multipart(body: bytes, boundary: str):
     boundary_bytes = ("--" + boundary).encode()
@@ -243,13 +415,34 @@ def safe_target(name: str) -> Path:
     return target
 
 
-# --------------------------------- HTTP handler ----------------------------------
+# ============================================================ themes (bundled)
+
+THEMES = [
+    {"id": "dark",      "name": "Dark"},
+    {"id": "light",     "name": "Light"},
+    {"id": "oled",      "name": "OLED Black"},
+    {"id": "dracula",   "name": "Dracula"},
+    {"id": "catppuccin","name": "Catppuccin"},
+    {"id": "solarized", "name": "Solarized"},
+    {"id": "nord",      "name": "Nord"},
+    {"id": "gruvbox",   "name": "Gruvbox"},
+    {"id": "system",    "name": "Match system"},
+]
+
+
+# ============================================================ HTTP handler
 
 class APIHandler(http.server.BaseHTTPRequestHandler):
-    server_version = "tk/1.0"
+    server_version = "tk/0.2"
 
     def log_message(self, fmt, *args):
-        pass  # silent
+        pass
+
+    # ---------- response helpers ----------
+    def _cors(self):
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
 
     def _send_json(self, data, status=200):
         body = json.dumps(data, default=str).encode("utf-8")
@@ -257,6 +450,7 @@ class APIHandler(http.server.BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
+        self._cors()
         self.end_headers()
         self.wfile.write(body)
 
@@ -276,39 +470,50 @@ class APIHandler(http.server.BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(data)))
         if download_name:
             self.send_header("Content-Disposition", f'attachment; filename="{download_name}"')
+        self._cors()
         self.end_headers()
         self.wfile.write(data)
 
+    # ---------- OPTIONS ----------
     def do_OPTIONS(self):
         self.send_response(204)
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self._cors()
         self.end_headers()
 
+    # ---------- GET ----------
     def do_GET(self):
         url = urllib.parse.urlsplit(self.path)
         path = url.path
+        qs = urllib.parse.parse_qs(url.query)
 
-        if path == "/" or path == "/index.html":
+        if path in ("/", "/index.html"):
             self._send_file(WEB / "index.html")
             return
         if path.startswith("/static/"):
-            rel = path[len("/static/"):]
-            self._send_file(WEB / rel)
+            self._send_file(WEB / path[len("/static/"):])
             return
+
+        if path == "/api/version":
+            self._send_json({"version": getattr(_tk, "__version__", "0.0.0")})
+            return
+
+        if path == "/api/themes":
+            self._send_json({"themes": THEMES})
+            return
+
         if path == "/api/categories":
-            cats = []
-            for key, info in CATEGORIES.items():
-                cats.append({
+            cats_out = []
+            for key, info in get_categories().items():
+                cats_out.append({
                     "key": key,
                     "label": info["label"],
                     "icon": info["icon"],
                     "module": info["module"],
                     "commands": list_commands(key),
                 })
-            self._send_json({"categories": cats})
+            self._send_json({"categories": cats_out})
             return
+
         if path.startswith("/api/schema/"):
             rest = path[len("/api/schema/"):].split("/")
             if len(rest) == 2:
@@ -320,9 +525,11 @@ class APIHandler(http.server.BaseHTTPRequestHandler):
                 return
             self._send_json({"error": "bad request"}, 400)
             return
+
         if path == "/api/files":
             self._send_json({"files": list_workspace_files()})
             return
+
         if path.startswith("/api/files/"):
             name = urllib.parse.unquote(path[len("/api/files/"):])
             if ".." in name or name.startswith("/") or name.startswith("\\"):
@@ -335,13 +542,113 @@ class APIHandler(http.server.BaseHTTPRequestHandler):
             self.send_error(404)
             return
 
-        # Try static fallback under web/
+        if path == "/api/jobs":
+            with _jobs_lock:
+                snap = [j.snapshot() for j in _jobs.values()]
+            self._send_json({"jobs": snap})
+            return
+
+        if path.startswith("/api/jobs/") and path.endswith("/events"):
+            jid = path[len("/api/jobs/"):-len("/events")]
+            job = _jobs.get(jid)
+            if not job:
+                self.send_error(404)
+                return
+            self._stream_job_events(job)
+            return
+
+        if path.startswith("/api/jobs/"):
+            jid = path[len("/api/jobs/"):]
+            job = _jobs.get(jid)
+            if not job:
+                self._send_json({"error": "job not found"}, 404)
+                return
+            self._send_json(job.snapshot())
+            return
+
+        if path == "/api/presets":
+            from _common import preset_list
+            self._send_json({"presets": preset_list()})
+            return
+
+        if path == "/api/history":
+            from _common import recent_runs
+            try:
+                limit = int(qs.get("limit", ["50"])[0])
+            except ValueError:
+                limit = 50
+            self._send_json({"runs": recent_runs(limit)})
+            return
+
+        if path == "/api/doctor":
+            self._send_json(self._doctor_report())
+            return
+
+        if path == "/api/config":
+            from _common import load_config
+            self._send_json({"config": load_config()})
+            return
+
+        # Static fallback under web/
         candidate = WEB / path.lstrip("/")
         if candidate.exists() and candidate.is_file():
             self._send_file(candidate)
             return
         self.send_error(404)
 
+    def _stream_job_events(self, job: Job):
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Connection", "keep-alive")
+        self.send_header("X-Accel-Buffering", "no")
+        self._cors()
+        self.end_headers()
+        # Initial state snapshot.
+        try:
+            self._sse_send("snapshot", job.snapshot())
+            # Drain pending events until job done.
+            while True:
+                try:
+                    evt = job.events.get(timeout=15.0)
+                except queue.Empty:
+                    self._sse_send("ping", {"t": time.time()})
+                    if job.state in ("done", "error", "cancelled") and job.events.empty():
+                        break
+                    continue
+                self._sse_send(evt["event"], evt["data"])
+                if evt["event"] == "done":
+                    break
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+
+    def _sse_send(self, kind: str, data):
+        try:
+            payload = data if isinstance(data, str) else json.dumps(data, default=str)
+            chunk = f"event: {kind}\ndata: {payload}\n\n".encode("utf-8")
+            self.wfile.write(chunk)
+            self.wfile.flush()
+        except (BrokenPipeError, ConnectionResetError):
+            raise
+
+    def _doctor_report(self):
+        from _common import have_module, have_binary
+        mods = [
+            "pypdf", "PIL", "reportlab", "markdown", "openpyxl", "yaml", "tomli",
+            "cryptography", "requests", "dns", "jwt", "qrcode", "pyzbar", "librosa",
+            "rembg", "cv2", "onnxruntime", "sentence_transformers", "faster_whisper",
+            "serial", "croniter", "dateutil", "camelot", "ocrmypdf", "pytesseract",
+            "mnemonic", "argon2", "piexif", "mutagen",
+        ]
+        bins = ["ffmpeg", "ffprobe", "pandoc", "tesseract", "gpg", "age", "qpdf"]
+        return {
+            "python":   sys.version.split()[0],
+            "platform": sys.platform,
+            "modules":  {m: have_module(m) for m in mods},
+            "binaries": {b: have_binary(b) for b in bins},
+        }
+
+    # ---------- DELETE ----------
     def do_DELETE(self):
         url = urllib.parse.urlsplit(self.path)
         path = url.path
@@ -355,14 +662,12 @@ class APIHandler(http.server.BaseHTTPRequestHandler):
                 target.unlink()
                 self._send_json({"ok": True})
             elif target.is_dir():
-                import shutil
                 shutil.rmtree(target)
                 self._send_json({"ok": True})
             else:
                 self.send_error(404)
             return
         if path == "/api/clear":
-            import shutil
             for p in WORKSPACE.iterdir():
                 if p.is_file():
                     p.unlink()
@@ -370,8 +675,23 @@ class APIHandler(http.server.BaseHTTPRequestHandler):
                     shutil.rmtree(p, ignore_errors=True)
             self._send_json({"ok": True})
             return
+        if path.startswith("/api/jobs/"):
+            jid = path[len("/api/jobs/"):]
+            job = _jobs.pop(jid, None)
+            if job:
+                self._send_json({"ok": True})
+            else:
+                self._send_json({"error": "not found"}, 404)
+            return
+        if path.startswith("/api/presets/"):
+            from _common import preset_delete
+            name = urllib.parse.unquote(path[len("/api/presets/"):])
+            ok = preset_delete(name)
+            self._send_json({"ok": ok})
+            return
         self.send_error(404)
 
+    # ---------- POST ----------
     def do_POST(self):
         url = urllib.parse.urlsplit(self.path)
         path = url.path
@@ -382,34 +702,64 @@ class APIHandler(http.server.BaseHTTPRequestHandler):
         body = self.rfile.read(length) if length else b""
 
         if path == "/api/run":
-            try:
-                req = json.loads(body.decode("utf-8") or "{}")
-            except Exception as e:
-                self._send_json({"error": f"bad JSON: {e}"}, 400)
+            req = self._json(body)
+            if req is None:
                 return
-            cat = req.get("category")
-            cmd = req.get("command")
-            args = req.get("args", [])
-            if cat not in CATEGORIES:
-                self._send_json({"error": "unknown category"}, 400)
-                return
+            cat = req.get("category"); cmd = req.get("command"); args = req.get("args", [])
+            if cat not in get_categories():
+                self._send_json({"error": "unknown category"}, 400); return
             if not isinstance(args, list):
-                self._send_json({"error": "args must be a list"}, 400)
+                self._send_json({"error": "args must be a list"}, 400); return
+            self._send_json(run_tool(cat, cmd, [str(a) for a in args]))
+            return
+
+        if path == "/api/run-async":
+            req = self._json(body)
+            if req is None:
                 return
-            args = [str(a) for a in args]
-            result = run_tool(cat, cmd, args)
-            self._send_json(result)
+            cat = req.get("category"); cmd = req.get("command"); args = req.get("args", [])
+            if cat not in get_categories():
+                self._send_json({"error": "unknown category"}, 400); return
+            if not isinstance(args, list):
+                self._send_json({"error": "args must be a list"}, 400); return
+            job = start_async_job(cat, cmd, [str(a) for a in args])
+            self._send_json({"id": job.id, "state": job.state})
+            return
+
+        if path == "/api/batch":
+            # Run a command across many input files. Body:
+            # {category, command, args, file_arg: "input", files: ["a.png", "b.png"]}
+            req = self._json(body)
+            if req is None:
+                return
+            cat = req.get("category"); cmd = req.get("command")
+            base_args = req.get("args", []) or []
+            file_arg = req.get("file_arg", "input")
+            files = req.get("files", [])
+            results = []
+            for fname in files:
+                # Find the placeholder in args.
+                this_args = []
+                substituted = False
+                for a in base_args:
+                    if a == "{file}" or a == f"${file_arg}":
+                        this_args.append(fname)
+                        substituted = True
+                    else:
+                        this_args.append(a)
+                if not substituted:
+                    this_args = [fname] + list(base_args)
+                results.append({"file": fname, "result": run_tool(cat, cmd, [str(a) for a in this_args])})
+            self._send_json({"results": results})
             return
 
         if path == "/api/upload":
             ctype = self.headers.get("Content-Type", "")
             if "multipart/form-data" not in ctype:
-                self._send_json({"error": "expected multipart/form-data"}, 400)
-                return
+                self._send_json({"error": "expected multipart/form-data"}, 400); return
             m = re.search(r"boundary=([^;]+)", ctype)
             if not m:
-                self._send_json({"error": "no boundary"}, 400)
-                return
+                self._send_json({"error": "no boundary"}, 400); return
             boundary = m.group(1).strip().strip('"')
             _, files = parse_multipart(body, boundary)
             saved = []
@@ -422,7 +772,6 @@ class APIHandler(http.server.BaseHTTPRequestHandler):
             return
 
         if path == "/api/clear":
-            import shutil
             for p in WORKSPACE.iterdir():
                 if p.is_file():
                     p.unlink()
@@ -431,7 +780,35 @@ class APIHandler(http.server.BaseHTTPRequestHandler):
             self._send_json({"ok": True})
             return
 
+        if path == "/api/presets":
+            from _common import preset_save
+            req = self._json(body)
+            if req is None:
+                return
+            try:
+                p = preset_save(req["name"], req["category"], req["command"], req.get("args", []))
+                self._send_json({"ok": True, "path": str(p)})
+            except KeyError as e:
+                self._send_json({"error": f"missing field: {e}"}, 400)
+            return
+
+        if path == "/api/config":
+            from _common import save_config, load_config
+            req = self._json(body)
+            if req is None:
+                return
+            cfg = load_config(); cfg.update(req or {}); save_config(cfg)
+            self._send_json({"ok": True, "config": cfg})
+            return
+
         self.send_error(404)
+
+    def _json(self, body: bytes):
+        try:
+            return json.loads(body.decode("utf-8") or "{}")
+        except Exception as e:
+            self._send_json({"error": f"bad JSON: {e}"}, 400)
+            return None
 
 
 class ThreadedServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
@@ -445,7 +822,8 @@ def serve(host="127.0.0.1", port=8765, open_browser=True):
     print()
     print(f"  tk web UI running at  {url}")
     print(f"  Workspace dir:        {WORKSPACE}")
-    print(f"  Press Ctrl+C to stop.")
+    print(f"  Categories loaded:    {len(get_categories())}")
+    print("  Press Ctrl+C to stop.")
     print()
     if open_browser:
         threading.Timer(0.5, lambda: webbrowser.open(url)).start()
@@ -457,9 +835,11 @@ def serve(host="127.0.0.1", port=8765, open_browser=True):
 
 
 def main(argv=None):
+    from _common import load_config
+    cfg = load_config()
     parser = argparse.ArgumentParser(prog="server", description="Web UI for the tk toolkit")
-    parser.add_argument("--host", default="127.0.0.1")
-    parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument("--host", default=cfg.get("server_host", "127.0.0.1"))
+    parser.add_argument("--port", type=int, default=cfg.get("server_port", 8765))
     parser.add_argument("--no-browser", action="store_true", help="don't auto-open the browser")
     args = parser.parse_args(argv)
     serve(args.host, args.port, open_browser=not args.no_browser)

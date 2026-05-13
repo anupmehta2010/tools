@@ -1,7 +1,12 @@
 # tools — Personal Toolkit
 
+[![CI](https://github.com/anupmehta2010/tools/actions/workflows/ci.yml/badge.svg)](https://github.com/anupmehta2010/tools/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+
 Swiss-army box of CLI tools for everyday tasks. One **all-in-one** entry point
-(`tk.py`), 12 standalone modules, **and a polished web UI**.
+(`tk.py`), **30+ standalone modules**, a **stdlib-only web UI**, async job runner,
+preset/history system, plugin loader, and pipeline mode.
 
 ## Quick start
 
@@ -10,16 +15,19 @@ python tk.py                                    # interactive menu
 python tk.py ui                                 # open the web UI in your browser
 python tk.py list                               # show every command
 python tk.py text hash --algo sha256 -i x.txt   # run a command directly
+python tk.py doctor                             # check optional deps
+python tk.py history                            # show recent runs
 ```
 
 The web UI (default `http://127.0.0.1:8765/`) gives you:
 
-- searchable command catalog (Ctrl+K) across all 12 categories
+- searchable command catalog (Ctrl+K) across **30+ categories**
 - dynamic forms generated from each command's argparse spec
 - file workspace with drag-and-drop upload + per-tool file picker
 - inline previews for images, videos, audio, PDF, text/code outputs
 - live `python tk.py …` command preview as you fill out the form
-- dark/light theme toggle
+- presets save / load, run-history viewer, async job streaming (SSE)
+- 9 themes (dark, light, OLED, dracula, catppuccin, solarized, nord, gruvbox, system)
 - runs on pure stdlib — no Flask/FastAPI/anything else
 
 Each module also runs standalone:
@@ -30,8 +38,9 @@ python image_tools.py convert photo.jpg photo.webp
 python media_tools.py compress big.mp4 small.mp4 --crf 28
 ```
 
-## Categories
+## Categories (30+)
 
+### Core
 | Category | Module             | What it does |
 |----------|--------------------|--------------|
 | pdf      | `pdf_tools.py`     | merge, split, extract text/images, info, md→pdf, html→pdf, img→pdf, compress, encrypt/decrypt |
@@ -45,18 +54,92 @@ python media_tools.py compress big.mp4 small.mp4 --crf 28
 | fs       | `fs_tools.py`      | bulk regex rename, dedupe, search, disk usage, sysinfo, tree, count |
 | dev      | `dev_tools.py`     | regex test/replace, color converter, lorem ipsum, base conv, calc, timestamp, slugify, curl→Python |
 | qr       | `qr_tools.py`      | generate QR (PNG/SVG/ASCII), decode QR from image |
-| oled     | `oled_tools.py`    | image/video → C arrays for SSD1306/SSD1351/ILI9341/ST7789/etc, BMP, preview, optimize-video for embedded |
+| oled     | `oled_tools.py`    | image/video → C arrays for SSD1306/SSD1351/ILI9341/ST7789/etc, BMP, preview, optimize-video |
+| convert  | `convert_tools.py` | universal converter: auto-route by file extension |
+
+### Advanced (v0.2)
+| Category    | Module               | What it does |
+|-------------|----------------------|--------------|
+| ai          | `ai_tools.py`        | local LLM via ollama (summarize, chat), faster-whisper STT, pyttsx3/piper TTS, rembg, sentence-transformers embeddings |
+| doc         | `doc_tools.py`       | md ↔ docx ↔ html ↔ pdf ↔ epub (pandoc), epub-info, wordcount |
+| code        | `code_tools.py`      | format (auto-detect), sloc, complexity (radon), secrets-scan, deps parse, license detect, TODO grep |
+| gen         | `gen_tools.py`       | favicon set, app-icon set, og-image, gitignore picker, sitemap, robots, readme scaffold |
+| time        | `time_tools.py`      | timezone convert, cron explain/next, duration calc, ICS generator, unix/iso timestamps |
+| finance     | `finance_tools.py`   | currency convert (live), rates, invoice PDF, tax, loan payment, compound interest |
+| db          | `db_tools.py`        | sqlite query, csv ↔ sqlite, schema dump, vacuum |
+| image-pro   | `imagepro_tools.py`  | rembg, EXIF strip/show, dominant palette, smart-crop (face), upscale, panorama, HDR, blur-face, denoise, compare |
+| audio-pro   | `audiopro_tools.py`  | loudnorm, denoise, BPM, spectrogram/waveform, pitch shift, tempo, stem split (demucs), silence-trim, LUFS |
+| video-pro   | `videopro_tools.py`  | scene split, subtitle burn/extract/auto, denoise, stabilize, slowmo, speedup, reverse, mux, frames |
+| pdf-pro     | `pdfpro_tools.py`    | OCR, redact, sign (visible+digital), table extract, form fill/extract, compare, bookmarks, linearize, reorder |
+| geo         | `geo_tools.py`       | gpx ↔ kml, gpx info/simplify, great-circle distance, geocode (Nominatim), reverse geocode, EXIF-GPS |
+| steg        | `steg_tools.py`      | LSB image/audio embed/extract (text or file payload), EXIF hide |
+| net-pro     | `netpro_tools.py`    | SSL cert info, security-header analyzer, JWT verify, HAR viewer, traceroute, speedtest, DNS, CORS check |
+| crypto-pro  | `cryptopro_tools.py` | age, GPG, ssh-keygen, BIP39 gen/verify, ECDSA, RSA, X.509 inspect, PBKDF2, argon2, TOTP |
+| forensic    | `forensic_tools.py`  | magic-byte detect, entropy, strings, hexdump, file carving, bulk hash, PE-info, metadata strip, timeline |
+| embedded    | `embedded_tools.py`  | hex view, intel-hex/srec parse, bin↔C array, font→bitmap, serial list/monitor, CRC-8/16/32/Fletcher |
+| ml          | `ml_tools.py`        | ONNX run/info, CLIP zero-shot classify, sentence-transformers embed, tiktoken, vector search |
+| 3d          | `threed_tools.py`    | obj/stl/ply parse, gcode info, decimate, voxelize, bbox |
+
+Every category module also runs standalone (`python <module>.py <cmd> ...`).
 
 ## Web UI
 
 ```bash
-python tk.py ui                # opens http://127.0.0.1:8765 in your browser
+python tk.py ui                # opens http://127.0.0.1:8765
 python tk.py ui --port 9000    # custom port
 python tk.py ui --no-browser   # don't auto-open browser
 ```
 
 Files uploaded through the UI live in `web_workspace/` and are visible to every
 tool. Output files are listed below the form with inline previews.
+
+### API endpoints (stdlib HTTP)
+
+- `GET  /api/categories` — list everything (incl. plugins)
+- `GET  /api/schema/<cat>/<cmd>` — argparse schema
+- `POST /api/run` — sync run
+- `POST /api/run-async` — start a background job
+- `GET  /api/jobs/<id>/events` — SSE stream of stdout/stderr/state
+- `POST /api/batch` — run a command over many files
+- `GET/POST/DELETE /api/presets[/<name>]` — preset CRUD
+- `GET  /api/history?limit=N` — recent runs
+- `GET  /api/doctor` — environment report
+- `GET  /api/themes`, `GET/POST /api/config`
+
+## Meta commands
+
+```bash
+python tk.py doctor                                    # check deps + binaries
+python tk.py history                                   # show recent runs
+python tk.py preset save my-name <cat> <cmd> [args]    # save preset
+python tk.py preset list
+python tk.py preset run my-name [extra args]
+python tk.py preset delete my-name
+python tk.py pipe "image:resize in.png --width 800 -o a.png" >> "image:watermark a.png -o b.png --text hi"
+python tk.py plugins                                   # discover plugins
+python tk.py --json list                               # JSON output
+python tk.py version
+```
+
+## Plugin system
+
+Drop any `<name>_tools.py` into `~/.tk/plugins/` (cross-project) or `./plugins/`
+(per-project). Required shape: `COMMANDS` dict, `build_parser()`, `main(argv)`.
+Optional: `LABEL`, `ICON` (emoji) for the menu / web UI.
+
+## Config
+
+`~/.tk/config.toml` — overrides defaults:
+
+```toml
+theme = "dracula"
+workspace = "/path/to/workspace"
+ollama_host = "http://localhost:11434"
+ollama_model = "llama3.2"
+ffmpeg_path = "ffmpeg"
+history_enabled = true
+history_keep = 500
+```
 
 ## Optional dependencies
 
@@ -67,11 +150,8 @@ pip install -r requirements.txt    # everything
 pip install pypdf pillow           # just PDF + images
 ```
 
-External binary needed for the `media` category:
-
-- **ffmpeg** — install from <https://ffmpeg.org> and ensure it is on `PATH`.
-
-For QR decoding, `pyzbar` needs the `libzbar` runtime DLL on Windows.
+External binaries needed for some categories — see top of `requirements.txt`.
+Run `python tk.py doctor` for a complete environment report.
 
 ## Examples
 
@@ -82,59 +162,62 @@ python tk.py ui
 # Generate 4 strong passwords with symbols
 python tk.py crypto password --length 24 --count 4 --symbols
 
-# Bulk rename: IMG_(\d+).jpg -> photo_$1.jpg
-python tk.py fs rename ./photos "IMG_(\d+).jpg" "photo_\1.jpg" --execute
+# Compress a video, then make a thumbnail (pipeline)
+python tk.py pipe "media:compress big.mp4 small.mp4 --crf 28" >> "media:thumbnail small.mp4 thumb.png"
 
-# Watermark an image
-python tk.py image watermark in.png out.png --text "(c) Anup"
+# Local AI summary via ollama
+python tk.py ai summarize -i report.txt --model llama3.2
 
-# Convert markdown to a styled PDF (uses generate_build_guide_pdf.py)
-python tk.py pdf md2pdf README.md -o README.pdf
+# OCR a PDF
+python tk.py pdf-pro ocr scanned.pdf -o searchable.pdf
 
-# Compress a video
-python tk.py media compress big.mp4 out.mp4 --crf 28
+# Remove background from an image
+python tk.py image-pro rembg photo.jpg photo-nobg.png
 
-# CSV -> Excel and back
-python tk.py data csv2xlsx data.csv data.xlsx
-python tk.py data xlsx2csv data.xlsx data.csv
+# Generate a complete favicon set
+python tk.py gen favicon logo.png -o favicons/
 
-# Decode a JWT (no signature verification)
-python tk.py crypto jwt eyJhbGciOiJIUzI1NiJ9...
+# SSL certificate info for a domain
+python tk.py net-pro ssl-info github.com:443
 
-# QR code in the terminal
-python tk.py qr gen "https://anthropic.com"
+# Detect file type by magic bytes
+python tk.py forensic magic mystery.bin
 
-# Find duplicate files
-python tk.py fs dedupe ./Downloads
+# BIP39 mnemonic
+python tk.py crypto-pro bip39-gen --words 24
 
-# Test a regex
-python tk.py dev regex "(\w+)@(\w+)" "alice@example.com bob@gmail.com"
+# Currency convert (live rate)
+python tk.py finance currency --from USD --to INR --amount 100
 
-# OLED: convert image to RGB565 C array for an ST7789 240x240
-python tk.py oled image-to-c logo.png -o logo.h --display st7789 --varname logo
+# Geocode an address
+python tk.py geo geocode "1600 Pennsylvania Avenue, Washington DC"
 
-# OLED: extract video frames as a C array animation for SSD1306 (mono)
-python tk.py oled video-to-c clip.mp4 -o anim.h --display ssd1306 --fps 15 --frames 30 --dither
-
-# OLED: render a preview of what an image will look like on a tiny mono screen
-python tk.py oled preview photo.jpg preview.png --display ssd1306 --dither --scale 6
-
-# OLED: re-encode a video to play on an MCU-driven 320x240 screen via MJPEG
-python tk.py oled optimize-video bigfile.mp4 small.mp4 --display ili9341 --fps 12 --quality 6 --no-audio
-
-# List built-in display profiles
-python tk.py oled displays
+# Build a 1bpp font bitmap for an embedded display
+python tk.py embedded font2bmp DejaVuSans.ttf --size 14 -o font.h --varname my_font
 ```
 
 ## Files
 
 ```text
-tk.py                            all-in-one launcher (interactive + dispatch)
-server.py                        web UI server (stdlib http.server)
-_common.py                       shared helpers (lazy_import, human_size, ...)
-pdf_tools.py ... oled_tools.py   12 category modules (each runnable standalone)
-generate_build_guide_pdf.py      original markdown -> styled PDF (kept as-is)
+tk.py                            all-in-one launcher (interactive + dispatch + meta cmds)
+server.py                        web UI server (stdlib http.server, SSE jobs)
+_common.py                       shared helpers + config/history/presets/plugin loader
+pdf_tools.py ... 3d (30+ modules) each runnable standalone
 web/                             single-page web UI (HTML/CSS/JS, no build step)
 web_workspace/                   uploaded files & tool outputs (created on demand)
+plugins/                         drop-in extra tool modules (auto-discovered)
+~/.tk/                           per-user config, presets, history db, plugins
 requirements.txt                 optional deps grouped by category
+LICENSE                          MIT
+.github/workflows/ci.yml         CI on push: lint + smoke test (linux/mac/win × py 3.10-3.12)
 ```
+
+## Contributing
+
+Plugin shape — just drop `myname_tools.py` into `~/.tk/plugins/` (see `dev_tools.py` for a small reference).
+
+Pull requests welcome. CI runs ruff + smoke tests on every push.
+
+## License
+
+MIT — see [LICENSE](LICENSE).

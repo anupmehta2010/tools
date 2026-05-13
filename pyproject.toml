@@ -1,0 +1,46 @@
+[project]
+name = "tk-tools"
+version = "0.2.0"
+description = "Swiss-army CLI + web UI toolkit. 30+ tool categories: pdf, image, media, text, data, archive, crypto, net, fs, dev, qr, oled, ai, doc, code, gen, time, finance, db, pdf-pro, image-pro, audio-pro, video-pro, geo, steg, net-pro, crypto-pro, forensic, embedded, ml, 3d."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Anup Mehta" }]
+keywords = ["cli", "tools", "toolkit", "pdf", "image", "media", "convert", "web-ui"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Environment :: Web Environment",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Utilities",
+]
+
+[project.urls]
+Homepage = "https://github.com/anupmehta2010/tools"
+Issues   = "https://github.com/anupmehta2010/tools/issues"
+
+[project.scripts]
+tk = "tk:main"
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = [
+    "E501",  # line length handled by formatter
+    "E402",  # late imports OK (we lazy-import deps)
+    "E741",  # ambiguous var names (l, I) OK for tools
+    "B008",  # function call in default arg
+    "UP007", # `X | None` style requires py310+ — fine, but allow Optional
+]
+exclude = ["__pycache__", "web_workspace", "dist", "build"]
+
+[tool.ruff.lint.per-file-ignores]
+"_common.py" = ["F401"]
