@@ -359,6 +359,87 @@ def start_async_job(category: str, command: str, args: list[str]) -> Job:
     return job
 
 
+# -- Recipe (pipeline) job: runs a recipe and emits per-node SSE events ----------
+
+def start_recipe_job(recipe: dict, variables: dict) -> Job:
+    job = Job("recipes", "run", [recipe.get("name", "_inline")])
+    job.state = "queued"
+    with _jobs_lock:
+        _jobs[job.id] = job
+
+    def _run():
+        job.state = "running"
+        job.started_at = time.time()
+        _job_emit(job, "state", {"state": "running"})
+
+        def emit(kind, payload):
+            _job_emit(job, kind, payload)
+
+        try:
+            import recipes_tools
+            result = recipes_tools.run_recipe(recipe, variables, emit_event=emit)
+            job.rc = 0 if result.get("ok") else 1
+            job.stdout = json.dumps(result, default=str)
+            job.state = "done" if result.get("ok") else "error"
+        except Exception as e:
+            job.rc = 1
+            job.stderr = f"{e}\n{traceback.format_exc()}"
+            job.state = "error"
+        job.finished_at = time.time()
+        _job_emit(job, "done", job.snapshot())
+
+    threading.Thread(target=_run, daemon=True).start()
+    return job
+
+
+# -- AI assistant: proxy chat to ollama with a tool-aware system prompt ----------
+
+def _ai_chat(req: dict) -> dict:
+    """POST {messages: [{role, content}]} → forward to ollama /api/chat."""
+    from _common import load_config
+    cfg = load_config()
+    host = req.get("host") or cfg.get("ollama_host", "http://localhost:11434")
+    model = req.get("model") or cfg.get("ollama_model", "llama3.2")
+    user_msgs = req.get("messages", [])
+
+    # System prompt: enumerate available tools so model can suggest [[run cat:cmd args]].
+    cats_summary = []
+    for cat, info in list(get_categories().items())[:40]:
+        cmds = list_commands(cat)
+        names = ", ".join(c["name"] for c in cmds if "name" in c)[:200]
+        cats_summary.append(f"- {cat}: {names}")
+    system = (
+        "You are an assistant inside the tk personal toolkit. Reply concisely. "
+        "When a user request maps to an available tool, suggest it inline with "
+        "the format [[run cat:cmd arg1=val1 arg2=val2]] so the UI can offer a Run button. "
+        "Available categories and commands:\n" + "\n".join(cats_summary)
+    )
+    messages = [{"role": "system", "content": system}] + user_msgs
+
+    body = json.dumps({"model": model, "messages": messages, "stream": False}).encode("utf-8")
+    import urllib.request
+    try:
+        rq = urllib.request.Request(
+            host.rstrip("/") + "/api/chat",
+            data=body,
+            headers={"Content-Type": "application/json"},
+        )
+        with urllib.request.urlopen(rq, timeout=60) as r:
+            data = json.loads(r.read().decode("utf-8"))
+        # Ollama: {"message": {"role": "assistant", "content": "..."}}
+        content = (data.get("message") or {}).get("content", "")
+        return {"role": "assistant", "content": content, "model": model}
+    except Exception as e:
+        return {
+            "role": "assistant",
+            "content": (
+                f"(AI backend not reachable: {e})\n\nTo enable: install ollama "
+                f"from https://ollama.com and run `ollama pull {model}`."
+            ),
+            "error": str(e),
+        }
+
+
 # ============================================================ workspace helpers
 
 def list_workspace_files():
@@ -575,6 +656,26 @@ class APIHandler(http.server.BaseHTTPRequestHandler):
             self._send_json({"presets": preset_list()})
             return
 
+        if path == "/api/recipes":
+            from _common import recipe_list
+            self._send_json({"recipes": recipe_list()})
+            return
+
+        if path.startswith("/api/recipes/"):
+            from _common import recipe_load
+            name = urllib.parse.unquote(path[len("/api/recipes/"):])
+            r = recipe_load(name)
+            if not r:
+                self._send_json({"error": "not found"}, 404)
+            else:
+                self._send_json(r)
+            return
+
+        if path == "/api/hooks":
+            from _common import hook_list
+            self._send_json({"hooks": hook_list()})
+            return
+
         if path == "/api/history":
             from _common import recent_runs
             try:
@@ -742,6 +843,18 @@ class APIHandler(http.server.BaseHTTPRequestHandler):
             ok = preset_delete(name)
             self._send_json({"ok": ok})
             return
+        if path.startswith("/api/recipes/"):
+            from _common import recipe_delete
+            name = urllib.parse.unquote(path[len("/api/recipes/"):])
+            ok = recipe_delete(name)
+            self._send_json({"ok": ok})
+            return
+        if path.startswith("/api/hooks/"):
+            from _common import hook_delete
+            name = urllib.parse.unquote(path[len("/api/hooks/"):])
+            ok = hook_delete(name)
+            self._send_json({"ok": ok})
+            return
         self.send_error(404)
 
     # ---------- POST ----------
@@ -843,6 +956,71 @@ class APIHandler(http.server.BaseHTTPRequestHandler):
                 self._send_json({"ok": True, "path": str(p)})
             except KeyError as e:
                 self._send_json({"error": f"missing field: {e}"}, 400)
+            return
+
+        if path == "/api/recipes":
+            from _common import recipe_save
+            req = self._json(body)
+            if req is None:
+                return
+            try:
+                p = recipe_save(req["name"], req.get("recipe", req))
+                self._send_json({"ok": True, "path": str(p)})
+            except KeyError as e:
+                self._send_json({"error": f"missing field: {e}"}, 400)
+            return
+
+        if path == "/api/recipes/run":
+            req = self._json(body)
+            if req is None:
+                return
+            from _common import recipe_load
+            if "recipe" in req:
+                recipe = req["recipe"]
+            elif "name" in req:
+                recipe = recipe_load(req["name"])
+                if not recipe:
+                    self._send_json({"error": "recipe not found"}, 404); return
+            else:
+                self._send_json({"error": "need 'recipe' or 'name'"}, 400); return
+            variables = req.get("vars", {}) or {}
+            job = start_recipe_job(recipe, variables)
+            self._send_json({"id": job.id, "state": job.state})
+            return
+
+        if path == "/api/hooks":
+            from _common import hook_save
+            req = self._json(body)
+            if req is None:
+                return
+            try:
+                hook = hook_save(req["name"], req["recipe"], req.get("token"))
+                self._send_json({"ok": True, "hook": hook})
+            except KeyError as e:
+                self._send_json({"error": f"missing field: {e}"}, 400)
+            return
+
+        if path.startswith("/api/hook/"):
+            # Webhook trigger: POST /api/hook/<token>  body = {vars: {...}}
+            from _common import hook_by_token, recipe_load
+            token = urllib.parse.unquote(path[len("/api/hook/"):])
+            hook = hook_by_token(token)
+            if not hook:
+                self._send_json({"error": "unknown token"}, 404); return
+            recipe = recipe_load(hook["recipe"])
+            if not recipe:
+                self._send_json({"error": f"recipe '{hook['recipe']}' missing"}, 500); return
+            req = self._json(body) or {}
+            variables = req.get("vars", {}) or {}
+            job = start_recipe_job(recipe, variables)
+            self._send_json({"ok": True, "job_id": job.id, "recipe": hook["recipe"]})
+            return
+
+        if path == "/api/ai/chat":
+            req = self._json(body)
+            if req is None:
+                return
+            self._send_json(_ai_chat(req))
             return
 
         if path == "/api/config":

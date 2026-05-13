@@ -1,0 +1,46 @@
+{
+  "name": "tk — Personal Toolkit",
+  "short_name": "tk",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#0d1117",
+  "background_color": "#0d1117",
+  "description": "One unified UI over PDFs, images, audio/video, encodings, data, archives, crypto, network, filesystem and more.",
+  "categories": ["productivity", "utilities", "developer"],
+  "icons": [
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIj48cmVjdCB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgZmlsbD0iIzBkMTExNyIgcng9IjI4Ii8+PHRleHQgeD0iNTAlIiB5PSI1OCUiIGZvbnQtc2l6ZT0iMTQwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIj7imqE8L3RleHQ+PC9zdmc+",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIj48cmVjdCB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgZmlsbD0iIzBkMTExNyIgcng9Ijc2Ii8+PHRleHQgeD0iNTAlIiB5PSI1OCUiIGZvbnQtc2l6ZT0iMzgwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIj7imqE8L3RleHQ+PC9zdmc+",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Open palette",
+      "short_name": "Palette",
+      "description": "Search every command (Ctrl+K)",
+      "url": "/?action=palette"
+    },
+    {
+      "name": "Workspace files",
+      "short_name": "Workspace",
+      "description": "Open the workspace files panel",
+      "url": "/?action=workspace"
+    },
+    {
+      "name": "Doctor",
+      "short_name": "Doctor",
+      "description": "Check optional dependencies",
+      "url": "/?action=doctor"
+    }
+  ]
+}

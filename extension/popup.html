@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>tk</title>
+<style>
+  :root {
+    --bg:        #0d1117;
+    --bg-elev:   #161b22;
+    --bg-hover:  #21262d;
+    --border:    #30363d;
+    --text:      #e6edf3;
+    --text-mut:  #8b949e;
+    --accent:    #2f81f7;
+    --success:   #3fb950;
+    --danger:    #f85149;
+    --mono:      'Cascadia Code', Consolas, Monaco, monospace;
+    --radius:    8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 300px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 13px;
+  }
+  body { padding: 12px; }
+  h1 {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  h1 .logo { font-size: 18px; }
+  .row { margin-bottom: 10px; }
+  label {
+    display: block;
+    color: var(--text-mut);
+    font-size: 11px;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  input[type="text"] {
+    width: 100%;
+    padding: 6px 9px;
+    background: var(--bg-elev);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 12px;
+    font-family: var(--mono);
+  }
+  input[type="text"]:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  .status {
+    font-size: 12px;
+    padding: 6px 9px;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .status.ok  { color: var(--success); }
+  .status.bad { color: var(--danger); }
+  button {
+    width: 100%;
+    padding: 7px 12px;
+    background: var(--accent);
+    color: white;
+    border: 0;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 12px;
+  }
+  button:hover { filter: brightness(1.1); }
+  .selections {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 160px;
+    overflow-y: auto;
+  }
+  .selections li {
+    padding: 6px 8px;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 11px;
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .selections li .text {
+    flex: 1;
+    color: var(--text-mut);
+    word-break: break-word;
+    line-height: 1.35;
+    max-height: 3em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .selections li a {
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 11px;
+    flex-shrink: 0;
+    cursor: pointer;
+  }
+  .selections li a:hover { text-decoration: underline; }
+  .empty {
+    color: var(--text-mut);
+    font-size: 11px;
+    font-style: italic;
+    padding: 6px 0;
+  }
+</style>
+</head>
+<body>
+  <h1><span class="logo">⚡</span> tk — Send to Toolkit</h1>
+
+  <div class="row">
+    <label for="server-input">tk server URL</label>
+    <input type="text" id="server-input" placeholder="http://127.0.0.1:8765">
+  </div>
+
+  <div class="row">
+    <div id="status" class="status">Checking…</div>
+  </div>
+
+  <div class="row">
+    <button id="open-btn">Open tk UI</button>
+  </div>
+
+  <div class="row">
+    <label>Recent selections</label>
+    <ul id="selections" class="selections"></ul>
+    <div id="selections-empty" class="empty">No recent selections.</div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

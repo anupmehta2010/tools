@@ -27,6 +27,7 @@ ADVANCED_MODULES = [
     "doc_tools", "embedded_tools", "finance_tools", "forensic_tools", "gen_tools",
     "geo_tools", "imagepro_tools", "ml_tools", "netpro_tools", "pdfpro_tools",
     "steg_tools", "threed_tools", "time_tools", "videopro_tools", "watch_tools",
+    "recipes_tools", "bundle_tools", "completions_tools",
 ]
 
 
@@ -44,7 +45,30 @@ def test_tk_imports():
     import tk
     assert tk.__version__
     cats = tk.available_categories()
-    assert len(cats) >= 32, f"expected ≥32 categories, got {len(cats)}"
+    assert len(cats) >= 36, f"expected ≥36 categories, got {len(cats)}"
+
+
+def test_recipe_scaffold_roundtrip(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
+    sys.modules.pop("_common", None)
+    import _common
+    importlib.reload(_common)
+    rec = {"name": "smoke-r", "steps": [{"id": "n1", "tool": "dev:calc", "argv": ["2+2"]}]}
+    _common.recipe_save("smoke-r", rec)
+    loaded = _common.recipe_load("smoke-r")
+    assert loaded["name"] == "smoke-r"
+    assert len(_common.recipe_list()) == 1
+    _common.recipe_delete("smoke-r")
+
+
+def test_bundle_info_runs():
+    r = subprocess.run(
+        [sys.executable, str(ROOT / "tk.py"), "bundle", "info"],
+        capture_output=True, text=True, timeout=60,
+    )
+    assert r.returncode == 0, r.stderr
+    assert "Bundle contents" in r.stdout
 
 
 def test_server_imports():

@@ -1685,3 +1685,25 @@ loadCategories().then(() => {
   }
   document.getElementById('history-count').textContent = storage.getHistory().length;
 });
+
+/* --------------------------------- Pipeline editor hook ------------------ */
+document.getElementById('pipeline-btn')?.addEventListener('click', () => {
+  if (window.tkPipeline) window.tkPipeline.open();
+});
+window.addEventListener('keydown', e => {
+  if (e.key === 'p' && !e.ctrlKey && !e.metaKey && !e.altKey
+      && document.activeElement?.tagName !== 'INPUT'
+      && document.activeElement?.tagName !== 'TEXTAREA') {
+    window.tkPipeline?.open();
+  }
+});
+
+/* --------------------------------- AI assistant hook -------------------- */
+document.getElementById('ai-btn')?.addEventListener('click', () => window.tkAI?.toggle());
+window.addEventListener('keydown', e => {
+  if (e.key === 'a' && !e.ctrlKey && !e.metaKey && !e.altKey
+      && document.activeElement?.tagName !== 'INPUT'
+      && document.activeElement?.tagName !== 'TEXTAREA') {
+    window.tkAI?.toggle();
+  }
+});

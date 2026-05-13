@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "tk — Send to Toolkit",
+  "version": "0.1.0",
+  "description": "Right-click images, links, or selection to send to a running tk web UI.",
+  "permissions": ["contextMenus", "downloads", "storage"],
+  "host_permissions": [
+    "http://127.0.0.1:8765/*",
+    "http://localhost:8765/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "tk"
+  }
+}

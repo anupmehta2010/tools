@@ -34,3 +34,10 @@ desktop.ini
 *.log
 *.tmp
 *.bak
+
+# Bundle artifacts
+*.pyz
+tk-portable.zip
+dist/
+_build/
+_spec/

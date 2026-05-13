@@ -76,6 +76,8 @@ def ensure_dir(path: Path) -> Path:
 ROOT = Path(__file__).parent
 HOME_DIR = ensure_dir(Path(os.path.expanduser("~")) / ".tk")
 PRESETS_DIR = ensure_dir(HOME_DIR / "presets")
+RECIPES_DIR = ensure_dir(HOME_DIR / "recipes")
+HOOKS_DIR   = ensure_dir(HOME_DIR / "hooks")
 PLUGINS_DIR = ensure_dir(HOME_DIR / "plugins")
 LOCAL_PLUGINS_DIR = ROOT / "plugins"
 HISTORY_DB = HOME_DIR / "history.db"
@@ -255,6 +257,90 @@ def preset_list() -> list[dict]:
 
 def preset_delete(name: str) -> bool:
     p = PRESETS_DIR / f"{name}.json"
+    if p.exists():
+        p.unlink()
+        return True
+    return False
+
+
+# ---------------------------------------------------------------- recipes (pipelines)
+
+def _safe_filename(name: str) -> str:
+    return "".join(c for c in name if c.isalnum() or c in "-_") or "recipe"
+
+
+def recipe_save(name: str, recipe: dict) -> Path:
+    """Persist a recipe JSON. Recipe shape: {name, description?, steps: [...], layout?}."""
+    recipe = dict(recipe)
+    recipe.setdefault("name", name)
+    recipe["saved_at"] = time.time()
+    path = RECIPES_DIR / f"{_safe_filename(name)}.json"
+    path.write_text(json.dumps(recipe, indent=2), encoding="utf-8")
+    return path
+
+
+def recipe_load(name: str) -> dict | None:
+    p = RECIPES_DIR / f"{_safe_filename(name)}.json"
+    if not p.exists():
+        return None
+    return json.loads(p.read_text(encoding="utf-8"))
+
+
+def recipe_list() -> list[dict]:
+    out = []
+    for p in sorted(RECIPES_DIR.glob("*.json")):
+        try:
+            out.append(json.loads(p.read_text(encoding="utf-8")))
+        except Exception:
+            continue
+    return out
+
+
+def recipe_delete(name: str) -> bool:
+    p = RECIPES_DIR / f"{_safe_filename(name)}.json"
+    if p.exists():
+        p.unlink()
+        return True
+    return False
+
+
+# ---------------------------------------------------------------- webhooks
+
+import secrets as _secrets
+
+
+def hook_save(name: str, recipe_name: str, token: str | None = None) -> dict:
+    """Bind a webhook token to a saved recipe."""
+    token = token or _secrets.token_urlsafe(24)
+    rec = {
+        "name":   name,
+        "recipe": recipe_name,
+        "token":  token,
+        "created_at": time.time(),
+    }
+    (HOOKS_DIR / f"{_safe_filename(name)}.json").write_text(json.dumps(rec, indent=2), encoding="utf-8")
+    return rec
+
+
+def hook_list() -> list[dict]:
+    out = []
+    for p in sorted(HOOKS_DIR.glob("*.json")):
+        try:
+            out.append(json.loads(p.read_text(encoding="utf-8")))
+        except Exception:
+            continue
+    return out
+
+
+def hook_by_token(token: str) -> dict | None:
+    for h in hook_list():
+        if h.get("token") == token:
+            return h
+    return None
+
+
+def hook_delete(name: str) -> bool:
+    p = HOOKS_DIR / f"{_safe_filename(name)}.json"
     if p.exists():
         p.unlink()
         return True

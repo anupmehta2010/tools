@@ -1,0 +1,379 @@
+/* ==========================================================================
+   tk — Pipeline editor (pipeline.css)
+   Node-graph UI for chaining tk commands.
+   ========================================================================== */
+
+.pl-page {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  color: var(--text);
+  z-index: 1300;
+  display: flex;
+  flex-direction: column;
+  animation: fadeIn .15s ease-out;
+}
+
+.pl-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: var(--bg-elev);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.pl-header h2 {
+  font-size: 16px;
+  font-weight: 700;
+  margin-right: 8px;
+}
+.pl-header .pl-spacer { flex: 1; }
+.pl-header select,
+.pl-header button {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background .12s, border-color .12s;
+}
+.pl-header button:hover,
+.pl-header select:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-bold);
+}
+.pl-header .pl-run-btn {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+  font-weight: 600;
+  box-shadow: 0 2px 8px var(--accent-glow);
+}
+.pl-header .pl-run-btn:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+.pl-header .pl-run-btn:disabled { opacity: 0.6; cursor: progress; }
+
+.pl-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+/* Left palette ----------------------------------------------------------- */
+.pl-palette {
+  width: 260px;
+  background: var(--bg-elev);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 12px;
+  flex-shrink: 0;
+}
+.pl-palette h3 {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-top: 12px;
+  margin-bottom: 6px;
+}
+.pl-palette h3:first-child { margin-top: 0; }
+.pl-palette .pl-tool {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: grab;
+  margin-bottom: 4px;
+  font-size: 12px;
+  transition: border-color .12s, transform .08s, background .12s;
+}
+.pl-palette .pl-tool:hover {
+  border-color: var(--accent);
+  background: var(--bg-hover);
+  transform: translateX(2px);
+}
+.pl-palette .pl-tool:active { cursor: grabbing; }
+.pl-palette .pl-tool .pl-tool-icon { font-size: 14px; }
+.pl-palette .pl-tool .pl-tool-name {
+  font-family: var(--mono);
+  color: var(--accent);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+.pl-palette-filter {
+  width: 100%;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+.pl-palette-filter:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+/* Canvas ----------------------------------------------------------------- */
+.pl-canvas {
+  flex: 1;
+  position: relative;
+  overflow: auto;
+  background:
+    radial-gradient(circle at 1px 1px, var(--border) 1px, transparent 0);
+  background-size: 24px 24px;
+  min-height: 0;
+}
+.pl-canvas-inner {
+  position: relative;
+  width: 4000px;
+  height: 3000px;
+}
+.pl-canvas .pl-empty {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--text-muted);
+  font-size: 14px;
+  pointer-events: none;
+  text-align: center;
+}
+.pl-canvas .pl-empty .pl-empty-icon { font-size: 48px; opacity: 0.5; margin-bottom: 8px; }
+
+.pl-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+.pl-svg .pl-edge {
+  fill: none;
+  stroke: var(--border-bold);
+  stroke-width: 2;
+  pointer-events: stroke;
+  cursor: pointer;
+  transition: stroke .12s;
+}
+.pl-svg .pl-edge:hover { stroke: var(--danger); stroke-width: 3; }
+.pl-svg .pl-edge.pl-edge-running {
+  stroke: var(--accent);
+  stroke-dasharray: 6 4;
+  animation: pl-dash 0.8s linear infinite;
+}
+@keyframes pl-dash { to { stroke-dashoffset: -10; } }
+.pl-svg .pl-edge-temp {
+  stroke: var(--accent);
+  stroke-dasharray: 4 4;
+}
+
+/* Node ------------------------------------------------------------------- */
+.pl-node {
+  position: absolute;
+  width: 240px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  z-index: 2;
+  transition: border-color .15s, box-shadow .15s;
+}
+.pl-node:hover { border-color: var(--border-bold); }
+.pl-node.pl-selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-glow), var(--shadow);
+}
+.pl-node[data-state="queued"] { border-color: var(--text-muted); }
+.pl-node[data-state="running"] {
+  border-color: var(--accent);
+  animation: pl-pulse 1.2s ease-in-out infinite;
+}
+@keyframes pl-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 var(--accent-glow), var(--shadow); }
+  50%      { box-shadow: 0 0 0 6px var(--accent-glow), var(--shadow); }
+}
+.pl-node[data-state="done"] {
+  border-color: var(--success);
+  box-shadow: 0 0 0 1px var(--success), var(--shadow);
+}
+.pl-node[data-state="error"] {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 1px var(--danger), var(--shadow);
+}
+
+.pl-node-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  border-radius: var(--radius) var(--radius) 0 0;
+  cursor: move;
+  user-select: none;
+}
+.pl-node-header .pl-node-icon { font-size: 14px; }
+.pl-node-header .pl-node-title {
+  flex: 1;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pl-node-header .pl-node-state {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: var(--bg-active);
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.pl-node[data-state="running"] .pl-node-state { background: var(--accent-glow); color: var(--accent); }
+.pl-node[data-state="done"] .pl-node-state { background: rgba(63,185,80,0.18); color: var(--success); }
+.pl-node[data-state="error"] .pl-node-state { background: rgba(248,81,73,0.18); color: var(--danger); }
+
+.pl-node-header .pl-node-del {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 4px;
+  line-height: 1;
+}
+.pl-node-header .pl-node-del:hover { color: var(--danger); }
+
+.pl-node-body {
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+.pl-node-body .pl-field { display: flex; flex-direction: column; gap: 2px; }
+.pl-node-body .pl-field label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-family: var(--mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pl-node-body .pl-field input,
+.pl-node-body .pl-field select {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 6px;
+  font: inherit;
+  font-size: 11px;
+  font-family: var(--mono);
+}
+.pl-node-body .pl-field input:focus,
+.pl-node-body .pl-field select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.pl-node-body .pl-field input.pl-piped {
+  border-style: dashed;
+  border-color: var(--accent);
+  background: var(--accent-glow);
+  color: var(--accent);
+  font-style: italic;
+}
+.pl-node-body .pl-field-checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+.pl-node-body .pl-no-args {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 4px 0;
+}
+.pl-node-body .pl-err {
+  font-size: 10px;
+  color: var(--danger);
+  font-family: var(--mono);
+  background: rgba(248,81,73,0.10);
+  padding: 4px 6px;
+  border-radius: 3px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 60px;
+  overflow-y: auto;
+}
+
+/* Ports ------------------------------------------------------------------ */
+.pl-port {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 2px solid var(--border-bold);
+  cursor: crosshair;
+  z-index: 3;
+  transition: background .12s, border-color .12s, transform .12s;
+}
+.pl-port:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  transform: scale(1.4);
+}
+.pl-port.pl-port-active {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.pl-port.in {
+  top: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.pl-port.in:hover { transform: translateX(-50%) scale(1.4); }
+.pl-port.out {
+  bottom: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.pl-port.out:hover { transform: translateX(-50%) scale(1.4); }
+
+/* Ghost drag preview ---------------------------------------------------- */
+.pl-ghost {
+  position: fixed;
+  width: 200px;
+  padding: 8px 12px;
+  background: var(--bg-elev);
+  border: 1px dashed var(--accent);
+  border-radius: var(--radius-sm);
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--accent);
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.9;
+  box-shadow: var(--shadow);
+}

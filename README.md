@@ -121,6 +121,114 @@ python tk.py --json list                               # JSON output
 python tk.py version
 ```
 
+## All-in-one bundle (single file)
+
+Ship the entire toolkit — every tool, the web UI, MCP server, recipes — as a
+single 200 KB file. Runs on any machine with Python 3.10+, no install:
+
+```bash
+python tk.py bundle zipapp -o tk.pyz       # build the single .pyz
+python tk.pyz                              # run interactive menu
+python tk.pyz ui                           # web UI
+python tk.pyz text hash -i x.txt           # any command works
+python tk.py bundle pyinstaller -o dist/   # native single-binary build
+python tk.py bundle zip -o tk-portable.zip # plain portable zip
+python tk.py bundle info                   # report what's included
+```
+
+One-shot install (drops a `tk` shim on PATH and builds the bundle):
+
+```bash
+# Windows PowerShell
+.\install.ps1
+
+# macOS / Linux
+./install.sh
+```
+
+## Recipes — visual pipelines
+
+Save and run multi-step JSON pipelines. Steps run in topological order,
+output filenames pass between steps via the workspace.
+
+```bash
+python tk.py recipes scaffold > my-recipe.json    # starter template
+python tk.py recipes save my-recipe.json --name photo-cleanup
+python tk.py recipes run photo-cleanup --var input=in.jpg --var output=out.jpg
+python tk.py recipes list
+```
+
+The web UI includes a **node-graph editor**: drag tools onto a canvas,
+connect ports, click ▶ Run. Save as recipe for reuse.
+
+## Webhooks
+
+Bind any recipe to an HTTPS token. POST to fire it from anything (GitHub
+Actions, Zapier, n8n, IFTTT, shell scripts):
+
+```bash
+# Create a hook bound to 'photo-cleanup' recipe (token printed):
+curl -X POST http://localhost:8765/api/hooks \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"photo-hook","recipe":"photo-cleanup"}'
+
+# Trigger it from anywhere:
+curl -X POST "http://localhost:8765/api/hook/$TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"vars":{"input":"in.jpg","output":"out.jpg"}}'
+```
+
+## AI assistant
+
+Built-in chat panel (🤖 button or `A` key). Hits a local Ollama instance and
+suggests tool invocations inline (`[[run cat:cmd …]]` blocks become one-click
+Run buttons). Configure host/model in `~/.tk/config.toml`:
+
+```toml
+ollama_host  = "http://localhost:11434"
+ollama_model = "llama3.2"
+```
+
+## MCP server (Claude Desktop / Cursor / Cline)
+
+Expose all 350+ commands as MCP tools:
+
+```jsonc
+// ~/Library/Application Support/Claude/claude_desktop_config.json
+{
+  "mcpServers": {
+    "tk": {
+      "command": "python",
+      "args": ["c:/path/to/tools/mcp_server.py"]
+    }
+  }
+}
+```
+
+## Folder watcher
+
+```bash
+python tk.py watch run ./inbox \
+  --glob "*.jpg" \
+  --tool "image-pro:rembg" \
+  --arg "{file}" --arg "out/{stem}.png"
+```
+
+## Shell completion
+
+```bash
+python tk.py completions bash > ~/.local/share/bash-completion/completions/tk
+python tk.py completions zsh  > ~/.zsh/completions/_tk
+python tk.py completions fish > ~/.config/fish/completions/tk.fish
+python tk.py completions pwsh | Out-String | Invoke-Expression
+```
+
+## Browser extension
+
+Unpacked dev install from `extension/`:
+- Chrome: `chrome://extensions` → Developer mode → Load unpacked → pick `extension/`
+- Right-click any image / link / selection → "Send to tk"
+
 ## Plugin system
 
 Drop any `<name>_tools.py` into `~/.tk/plugins/` (cross-project) or `./plugins/`
