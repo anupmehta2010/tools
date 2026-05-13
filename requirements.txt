@@ -1,0 +1,25 @@
+# Optional dependencies. Install only what you need:
+#
+#   pip install -r requirements.txt           # install everything
+#   pip install reportlab pypdf pillow        # only PDF + images
+#
+# External binaries (NOT pip-installable):
+#   - ffmpeg       https://ffmpeg.org   (required for media_tools.py)
+
+# ---- PDF ----
+reportlab>=4.0
+pypdf>=4.0
+xhtml2pdf>=0.2.16
+
+# ---- Images / QR ----
+Pillow>=10.0
+qrcode>=7.4
+pyzbar>=0.1.9
+
+# ---- Data ----
+openpyxl>=3.1
+PyYAML>=6.0
+tomli>=2.0;python_version<"3.11"
+
+# ---- Crypto ----
+cryptography>=42.0

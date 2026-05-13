@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>tk — Personal Toolkit</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='52' font-size='52'%3E%E2%9A%A1%3C/text%3E%3C/svg%3E">
+</head>
+<body>
+<div id="app">
+  <header class="topbar">
+    <div class="brand" id="brand" title="Home">
+      <span class="logo">⚡</span>
+      <span class="title">tk</span>
+      <span class="subtitle">Personal Toolkit</span>
+    </div>
+
+    <button type="button" id="search-btn" class="search-btn" title="Search commands  (Ctrl+K)">
+      <span class="search-icon">🔍</span>
+      <span class="search-text">Search <strong id="search-cmd-count">127</strong> commands…</span>
+      <span class="kbd"><kbd>Ctrl</kbd>+<kbd>K</kbd></span>
+    </button>
+
+    <div class="actions">
+      <button type="button" id="history-btn" class="icon-btn" title="Run history (Y)">
+        <span>⏱</span><span class="badge" id="history-count">0</span>
+      </button>
+      <button type="button" id="shortcuts-btn" class="icon-btn" title="Keyboard shortcuts (?)">⌨</button>
+      <button type="button" id="theme-toggle" class="icon-btn" title="Toggle theme (T)">🌙</button>
+      <button type="button" id="files-btn" class="icon-btn" title="Workspace files (W)">
+        <span>📁</span><span class="badge" id="file-count">0</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <ul id="categories" class="cat-list"></ul>
+      <div class="sidebar-foot">
+        <div class="foot-stats">
+          <strong id="foot-cmd-count">127</strong> commands
+          <span class="dot">·</span>
+          <strong id="foot-cat-count">12</strong> categories
+        </div>
+        <span class="muted small">Drop files anywhere to upload</span>
+      </div>
+    </aside>
+
+    <main class="content">
+      <section id="welcome" class="welcome">
+        <div class="hero">
+          <div class="hero-bg"></div>
+          <h1>Personal Toolkit</h1>
+          <p>One unified UI over <strong id="cat-count">12</strong> categories, <strong id="cmd-count">127</strong> commands — PDFs, images, audio/video, encodings, data conversion, archives, crypto, network, filesystem, dev utilities, QR codes, and embedded OLED displays.</p>
+          <div class="hero-actions">
+            <button id="hero-search" class="btn-primary">⌘ Search commands…</button>
+            <button id="hero-upload" class="btn-secondary">📤 Upload Files</button>
+            <button id="hero-list" class="btn-secondary">📋 Browse all</button>
+          </div>
+        </div>
+
+        <section id="recent-section" class="welcome-row hidden">
+          <div class="row-head">
+            <h3>⏱  Recent</h3>
+            <button id="clear-recent" class="link-btn small">Clear</button>
+          </div>
+          <div id="recent-grid" class="grid"></div>
+        </section>
+
+        <section id="favorites-section" class="welcome-row hidden">
+          <div class="row-head">
+            <h3>⭐  Favorites</h3>
+          </div>
+          <div id="favorites-grid" class="grid"></div>
+        </section>
+
+        <section class="welcome-row">
+          <div class="row-head">
+            <h3>📦  All Categories</h3>
+          </div>
+          <div id="welcome-grid" class="grid"></div>
+        </section>
+
+        <details class="quick">
+          <summary>Quick examples</summary>
+          <ul class="examples">
+            <li><span class="chip">pdf</span> merge several PDFs into one</li>
+            <li><span class="chip">image</span> convert any format to any (PNG ↔ JPG ↔ WebP)</li>
+            <li><span class="chip">media</span> compress a video at CRF 28 (needs ffmpeg)</li>
+            <li><span class="chip">text</span> base64 / SHA-256 / case conversion / JSON pretty-print</li>
+            <li><span class="chip">data</span> CSV ↔ JSON ↔ Excel / YAML ↔ JSON / XML → JSON</li>
+            <li><span class="chip">crypto</span> generate strong passwords, decode JWTs, Fernet encrypt</li>
+            <li><span class="chip">qr</span> generate QR codes (PNG/SVG/ASCII)</li>
+            <li><span class="chip">oled</span> image/video → C array for SSD1306, ILI9341, ST7789, …</li>
+          </ul>
+        </details>
+      </section>
+
+      <section id="commands" class="commands hidden">
+        <div class="cmd-header">
+          <button class="btn-back" data-back="welcome">← Home</button>
+          <h2 id="cmd-cat-title"></h2>
+          <p id="cmd-cat-desc" class="muted"></p>
+        </div>
+        <ul id="commands-list" class="cmd-list"></ul>
+        <div class="muted small kbd-hint">Use <kbd>↑</kbd> <kbd>↓</kbd> (or <kbd>j</kbd> <kbd>k</kbd>) to navigate, <kbd>Enter</kbd> to open</div>
+      </section>
+
+      <section id="form" class="form hidden">
+        <nav id="breadcrumbs" class="breadcrumbs"></nav>
+        <div class="form-header">
+          <button class="btn-back" data-back="commands">← Back</button>
+          <div class="form-title-row">
+            <h2 id="form-title"></h2>
+            <button type="button" id="favorite-btn" class="star-btn" title="Toggle favorite">☆</button>
+            <button type="button" id="prev-cmd-btn" class="icon-btn small" title="Previous command (Ctrl+[)">‹</button>
+            <button type="button" id="next-cmd-btn" class="icon-btn small" title="Next command (Ctrl+])">›</button>
+          </div>
+          <p id="form-help" class="muted"></p>
+        </div>
+        <form id="form-fields" autocomplete="off"></form>
+        <div class="form-actions">
+          <button id="run-btn" class="btn-primary">▶ Run  <span class="kbd-inline"><kbd>Ctrl</kbd>+<kbd>↵</kbd></span></button>
+          <button id="reset-btn" class="btn-secondary" type="button">Reset</button>
+          <button id="sample-btn" class="btn-secondary" type="button" title="Fill with a sample">✨ Sample</button>
+          <button id="preset-save-btn" class="btn-secondary" type="button" title="Save current values as preset">💾 Save preset</button>
+          <select id="preset-load" class="btn-secondary preset-select" title="Load preset"><option value="">Presets…</option></select>
+          <button id="cmd-copy-btn" class="btn-secondary" type="button" title="Copy CLI command">📋 CLI</button>
+        </div>
+        <div id="cmd-preview-row" class="cmd-preview-row">
+          <span id="cmd-preview" class="muted mono"></span>
+        </div>
+
+        <div id="output" class="output hidden">
+          <div class="output-tabs">
+            <button class="tab active" data-tab="stdout">Output</button>
+            <button class="tab" data-tab="stderr">Errors <span id="stderr-dot" class="dot-mark hidden"></span></button>
+            <button class="tab" data-tab="files">Files <span id="files-count-mark" class="dot-mark hidden">0</span></button>
+            <button class="tab" data-tab="preview">Preview</button>
+            <div class="tab-actions">
+              <span id="run-elapsed" class="muted small"></span>
+              <button type="button" id="copy-btn" class="icon-btn small" title="Copy active tab content">📋</button>
+              <button type="button" id="expand-btn" class="icon-btn small" title="Expand fullscreen">⛶</button>
+            </div>
+          </div>
+          <div id="tab-stdout" class="tab-content active"><pre id="output-stdout">(no output)</pre></div>
+          <div id="tab-stderr" class="tab-content"><pre id="output-stderr">(none)</pre></div>
+          <div id="tab-files" class="tab-content"><ul id="output-files" class="files-out"></ul></div>
+          <div id="tab-preview" class="tab-content"><div id="output-preview"></div></div>
+        </div>
+      </section>
+    </main>
+
+    <aside id="history-panel" class="files-panel hidden">
+      <div class="files-header">
+        <h3>Run History</h3>
+        <button type="button" id="history-clear" class="link-btn">Clear all</button>
+        <button type="button" id="history-close" class="icon-btn">✕</button>
+      </div>
+      <ul id="history-list" class="history-list"></ul>
+      <div class="muted small" id="history-empty">No runs yet.</div>
+    </aside>
+
+    <aside id="files-panel" class="files-panel hidden">
+      <div class="files-header">
+        <h3>Workspace</h3>
+        <button id="files-clear" class="link-btn">Clear all</button>
+        <button id="files-close" class="icon-btn">✕</button>
+      </div>
+      <label class="btn-upload" for="upload-input">
+        <span>📤</span><span>Upload files (or drag-drop anywhere)</span>
+      </label>
+      <input type="file" id="upload-input" multiple>
+      <ul id="files-list" class="files-list"></ul>
+      <div class="muted small" id="ws-empty">Workspace is empty.</div>
+    </aside>
+  </div>
+</div>
+
+<!-- Command palette (Ctrl+K) -->
+<div id="palette" class="palette hidden" aria-hidden="true">
+  <div class="palette-modal" role="dialog">
+    <div class="palette-input-wrap">
+      <span class="palette-icon">🔍</span>
+      <input id="palette-input" type="text" placeholder="Type to search commands…" autocomplete="off">
+      <span class="kbd"><kbd>ESC</kbd></span>
+    </div>
+    <ul id="palette-results" class="palette-results"></ul>
+    <div class="palette-foot">
+      <span><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
+      <span><kbd>↵</kbd> Open</span>
+      <span><kbd>Tab</kbd> Pin to favorites</span>
+      <span><kbd>ESC</kbd> Close</span>
+    </div>
+  </div>
+</div>
+
+<!-- Shortcuts cheatsheet -->
+<div id="shortcuts" class="modal hidden" aria-hidden="true">
+  <div class="modal-card" role="dialog">
+    <div class="modal-head">
+      <h2>Keyboard Shortcuts</h2>
+      <button type="button" class="icon-btn" id="shortcuts-close">✕</button>
+    </div>
+    <table class="shortcuts-table">
+      <tr><td><kbd>Ctrl</kbd>+<kbd>K</kbd></td><td>Open command palette</td></tr>
+      <tr><td><kbd>?</kbd></td><td>Show this help</td></tr>
+      <tr><td><kbd>T</kbd></td><td>Toggle dark/light theme</td></tr>
+      <tr><td><kbd>W</kbd></td><td>Toggle workspace panel</td></tr>
+      <tr><td><kbd>H</kbd> / <kbd>Esc</kbd></td><td>Go home / close modal</td></tr>
+      <tr><td><kbd>↑</kbd> <kbd>↓</kbd> or <kbd>j</kbd> <kbd>k</kbd></td><td>Navigate command list</td></tr>
+      <tr><td><kbd>Enter</kbd></td><td>Open selected command</td></tr>
+      <tr><td><kbd>Ctrl</kbd>+<kbd>Enter</kbd></td><td>Run command (in form)</td></tr>
+      <tr><td><kbd>Backspace</kbd></td><td>Go back</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- Fullscreen expand overlay -->
+<div id="expand-overlay" class="expand-overlay hidden" aria-hidden="true">
+  <div class="expand-head">
+    <span id="expand-title" class="muted"></span>
+    <button type="button" id="expand-close" class="icon-btn">✕ Close (Esc)</button>
+  </div>
+  <div id="expand-content"></div>
+</div>
+
+<!-- Drop overlay -->
+<div id="drop-overlay" class="drop-overlay hidden">
+  <div class="drop-card">
+    <div style="font-size: 64px;">📥</div>
+    <h2>Drop to upload</h2>
+    <p class="muted">Files go to the workspace, available to every tool.</p>
+  </div>
+</div>
+
+<!-- First-visit splash tour -->
+<div id="tour" class="modal hidden" aria-hidden="true">
+  <div class="modal-card tour-card" role="dialog">
+    <div class="tour-step" data-step="1">
+      <div class="tour-icon">⚡</div>
+      <h2>Welcome to tk</h2>
+      <p>One web UI over <strong id="tour-cmd-count">172</strong> CLI commands across <strong id="tour-cat-count">13</strong> categories. Convert any file to anything, manipulate PDFs, generate QR codes, build C arrays for OLED screens, and a lot more.</p>
+    </div>
+    <div class="tour-step hidden" data-step="2">
+      <div class="tour-icon">⌨</div>
+      <h2>Keyboard-first</h2>
+      <p>Press <kbd>Ctrl</kbd>+<kbd>K</kbd> to open the command palette and search every command. <kbd>?</kbd> shows the full keyboard shortcut list.</p>
+    </div>
+    <div class="tour-step hidden" data-step="3">
+      <div class="tour-icon">📤</div>
+      <h2>Drag-and-drop files</h2>
+      <p>Drag files anywhere in the window — they upload into your workspace and are immediately usable by every tool. Each file-input field is also its own drop target.</p>
+    </div>
+    <div class="tour-step hidden" data-step="4">
+      <div class="tour-icon">🔄</div>
+      <h2>Universal converter</h2>
+      <p>Try the new <code>convert</code> category for one-shot any-to-any: <code>tk convert auto file.csv file.json</code>. Or browse <code>convert list</code> to see every supported route.</p>
+    </div>
+    <div class="tour-foot">
+      <span id="tour-progress" class="muted">1 / 4</span>
+      <div class="tour-actions">
+        <button type="button" id="tour-skip" class="btn-secondary">Skip</button>
+        <button type="button" id="tour-next" class="btn-primary">Next →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Preset save dialog -->
+<div id="preset-dialog" class="modal hidden" aria-hidden="true">
+  <div class="modal-card" role="dialog">
+    <div class="modal-head">
+      <h2>Save preset</h2>
+      <button type="button" class="icon-btn" id="preset-cancel">✕</button>
+    </div>
+    <p class="muted">Save the current form values under a name. Stored locally and available in this command's preset list.</p>
+    <input id="preset-name-input" type="text" placeholder="Preset name" autocomplete="off">
+    <div class="form-actions">
+      <button type="button" id="preset-confirm" class="btn-primary">Save</button>
+      <button type="button" id="preset-cancel-2" class="btn-secondary">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toasts -->
+<div id="toasts" class="toasts" aria-live="polite"></div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
