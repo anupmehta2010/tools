@@ -82,6 +82,7 @@ CATEGORIES: dict[str, tuple[str, str, str]] = {
     "embedded":    ("embedded_tools",   "Embedded: hex, intel-hex, bin↔C, font→bmp, serial, CRC",  "🔌"),
     "ml":          ("ml_tools",         "ML: ONNX run, classify, embed, tokenize, vector search", "🧠"),
     "3d":          ("threed_tools",     "3D: obj/stl/ply, gcode info, decimate, voxelize, bbox",   "🧊"),
+    "watch":       ("watch_tools",      "Folder watcher: trigger a tool on new/changed files",     "👁️"),
 }
 
 

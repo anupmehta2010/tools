@@ -54,6 +54,59 @@ const api = {
     const r = await fetch('/api/clear', {method: 'DELETE'});
     return r.json();
   },
+
+  /* ---- async jobs (SSE) ---- */
+  async runAsync(category, command, args) {
+    const r = await fetch('/api/run-async', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({category, command, args}),
+    });
+    return r.json();
+  },
+  streamJob(jobId, handlers) {
+    const es = new EventSource(`/api/jobs/${jobId}/events`);
+    if (handlers.stdout) es.addEventListener('stdout', e => handlers.stdout(e.data));
+    if (handlers.stderr) es.addEventListener('stderr', e => handlers.stderr(e.data));
+    if (handlers.state)  es.addEventListener('state',  e => handlers.state(JSON.parse(e.data)));
+    if (handlers.snapshot) es.addEventListener('snapshot', e => handlers.snapshot(JSON.parse(e.data)));
+    es.addEventListener('done', e => {
+      if (handlers.done) handlers.done(JSON.parse(e.data));
+      es.close();
+    });
+    es.onerror = () => { try { es.close(); } catch (e) { /* noop */ } };
+    return es;
+  },
+
+  /* ---- meta endpoints (v0.2) ---- */
+  async getDoctor()  { const r = await fetch('/api/doctor');  return r.json(); },
+  async getThemes()  { const r = await fetch('/api/themes');  return r.json(); },
+  async getVersion() { const r = await fetch('/api/version'); return r.json(); },
+  async getPresets() { const r = await fetch('/api/presets'); return r.json(); },
+  async savePreset(name, category, command, args) {
+    const r = await fetch('/api/presets', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({name, category, command, args}),
+    });
+    return r.json();
+  },
+  async deletePreset(name) {
+    const r = await fetch(`/api/presets/${encodeURIComponent(name)}`, {method: 'DELETE'});
+    return r.json();
+  },
+  async getHistory(limit = 50) {
+    const r = await fetch(`/api/history?limit=${limit}`);
+    return r.json();
+  },
+  async runBatch(category, command, args, files, file_arg = 'input') {
+    const r = await fetch('/api/batch', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({category, command, args, files, file_arg}),
+    });
+    return r.json();
+  },
 };
 
 /* --------------------------------- Storage ------------------------------ */
@@ -188,7 +241,48 @@ function toast(msg, kind = 'info') {
 function initTheme() {
   const saved = localStorage.getItem('tk-theme') || 'dark';
   document.documentElement.dataset.theme = saved;
-  document.getElementById('theme-toggle').textContent = saved === 'dark' ? '☀️' : '🌙';
+  const btn = document.getElementById('theme-toggle');
+  if (btn) btn.textContent = themeIcon(saved);
+}
+function themeIcon(t) {
+  return ({
+    dark: '🌙', light: '☀️', oled: '⬛', dracula: '🧛',
+    catppuccin: '🐱', solarized: '🌅', nord: '❄️', gruvbox: '🟫', system: '🖥️',
+  })[t] || '🎨';
+}
+function openThemePicker() {
+  let pop = document.getElementById('theme-picker');
+  if (pop) { pop.remove(); return; }
+  const themes = [
+    ['dark','Dark'], ['light','Light'], ['oled','OLED Black'],
+    ['dracula','Dracula'], ['catppuccin','Catppuccin'], ['solarized','Solarized'],
+    ['nord','Nord'], ['gruvbox','Gruvbox'], ['system','Match system'],
+  ];
+  const cur = document.documentElement.dataset.theme || 'dark';
+  pop = document.createElement('div');
+  pop.id = 'theme-picker';
+  pop.className = 'theme-picker';
+  pop.innerHTML = themes.map(([id, name]) =>
+    `<button data-theme="${id}" class="${id === cur ? 'active' : ''}">${themeIcon(id)}  ${name}</button>`
+  ).join('');
+  document.body.appendChild(pop);
+  pop.addEventListener('click', e => {
+    const b = e.target.closest('button[data-theme]');
+    if (!b) return;
+    const t = b.dataset.theme;
+    document.documentElement.dataset.theme = t;
+    localStorage.setItem('tk-theme', t);
+    document.getElementById('theme-toggle').textContent = themeIcon(t);
+    pop.remove();
+  });
+  setTimeout(() => {
+    document.addEventListener('click', function close(e) {
+      if (!pop.contains(e.target) && e.target.id !== 'theme-toggle') {
+        pop.remove();
+        document.removeEventListener('click', close);
+      }
+    });
+  }, 0);
 }
 function toggleTheme() {
   const cur = document.documentElement.dataset.theme || 'dark';
@@ -197,7 +291,44 @@ function toggleTheme() {
   localStorage.setItem('tk-theme', next);
   document.getElementById('theme-toggle').textContent = next === 'dark' ? '☀️' : '🌙';
 }
-document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
+document.getElementById('theme-toggle').addEventListener('click', openThemePicker);
+
+/* ------- Doctor modal (Ctrl+Shift+D or click button) ------- */
+async function showDoctor() {
+  const data = await api.getDoctor();
+  let modal = document.getElementById('doctor-modal');
+  if (modal) modal.remove();
+  modal = document.createElement('div');
+  modal.id = 'doctor-modal';
+  modal.className = 'modal';
+  const cellRow = (name, ok) =>
+    `<li><span>${name}</span><span class="${ok ? 'ok' : 'no'}">${ok ? '✔ installed' : '· missing'}</span></li>`;
+  const mods = Object.entries(data.modules || {}).map(([n, ok]) => cellRow(n, ok)).join('');
+  const bins = Object.entries(data.binaries || {}).map(([n, ok]) => cellRow(n, ok)).join('');
+  modal.innerHTML = `
+    <div class="modal-card" role="dialog">
+      <div class="modal-head">
+        <h2>🩺  Environment Doctor</h2>
+        <button type="button" class="icon-btn" id="doctor-close">✕</button>
+      </div>
+      <p class="muted small">Python <strong>${data.python}</strong> · ${data.platform}</p>
+      <div class="doctor-grid">
+        <div><h4>Python modules</h4><ul>${mods}</ul></div>
+        <div><h4>External binaries</h4><ul>${bins}</ul></div>
+      </div>
+      <p class="muted small" style="margin-top:12px">Install only what you need. Most tools work without any optional deps.</p>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => {
+    if (e.target === modal || e.target.id === 'doctor-close') modal.remove();
+  });
+}
+window.addEventListener('keydown', e => {
+  if (e.ctrlKey && e.shiftKey && (e.key === 'D' || e.key === 'd')) {
+    e.preventDefault();
+    showDoctor();
+  }
+});
 
 /* --------------------------------- View routing ------------------------- */
 function showView(name) {

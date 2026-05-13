@@ -497,6 +497,10 @@ class APIHandler(http.server.BaseHTTPRequestHandler):
             self._send_json({"version": getattr(_tk, "__version__", "0.0.0")})
             return
 
+        if path == "/api/openapi.json":
+            self._send_json(self._openapi_spec())
+            return
+
         if path == "/api/themes":
             self._send_json({"themes": THEMES})
             return
@@ -630,6 +634,55 @@ class APIHandler(http.server.BaseHTTPRequestHandler):
             self.wfile.flush()
         except (BrokenPipeError, ConnectionResetError):
             raise
+
+    def _openapi_spec(self):
+        """Auto-generate OpenAPI 3.1 spec for every category/command."""
+        paths = {
+            "/api/categories": {"get": {"summary": "List categories + commands", "responses": {"200": {"description": "ok"}}}},
+            "/api/files":      {"get": {"summary": "List workspace files", "responses": {"200": {"description": "ok"}}}},
+            "/api/jobs":       {"get": {"summary": "List jobs", "responses": {"200": {"description": "ok"}}}},
+            "/api/history":    {"get": {"summary": "Recent runs", "responses": {"200": {"description": "ok"}}}},
+            "/api/doctor":     {"get": {"summary": "Environment report", "responses": {"200": {"description": "ok"}}}},
+            "/api/themes":     {"get": {"summary": "Theme list", "responses": {"200": {"description": "ok"}}}},
+            "/api/presets":    {
+                "get":  {"summary": "List presets", "responses": {"200": {"description": "ok"}}},
+                "post": {"summary": "Save preset", "responses": {"200": {"description": "ok"}}},
+            },
+            "/api/run":        {"post": {"summary": "Run tool synchronously", "responses": {"200": {"description": "ok"}}}},
+            "/api/run-async":  {"post": {"summary": "Start a background job",  "responses": {"200": {"description": "ok"}}}},
+            "/api/batch":      {"post": {"summary": "Run a tool over many files", "responses": {"200": {"description": "ok"}}}},
+            "/api/upload":     {"post": {"summary": "Upload files (multipart)", "responses": {"200": {"description": "ok"}}}},
+        }
+        # Per-tool endpoints (synthetic) for discoverability:
+        for cat, info in get_categories().items():
+            for c in list_commands(cat):
+                if "error" in c:
+                    continue
+                cmd = c["name"]
+                schema = get_command_schema(cat, cmd) or []
+                path = f"/api/run#{cat}.{cmd}"
+                props = {}
+                for a in schema:
+                    t = {"int": "integer", "float": "number", "bool": "boolean"}.get(a["type"], "string")
+                    props[a["name"]] = {"type": t, "description": a["help"]}
+                paths[path] = {
+                    "post": {
+                        "summary": f"{cat} {cmd} — {c['help']}",
+                        "tags": [cat],
+                        "requestBody": {"content": {"application/json": {"schema": {"type": "object", "properties": props}}}},
+                        "responses": {"200": {"description": "tool output"}},
+                    }
+                }
+        return {
+            "openapi": "3.1.0",
+            "info": {
+                "title": "tk Toolkit API",
+                "version": getattr(_tk, "__version__", "0.0.0"),
+                "description": "Auto-generated from every category + command.",
+            },
+            "servers": [{"url": "/"}],
+            "paths": paths,
+        }
 
     def _doctor_report(self):
         from _common import have_module, have_binary
