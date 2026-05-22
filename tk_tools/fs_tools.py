@@ -14,7 +14,7 @@ from _common import human_size, tool_main
 
 
 def _walk(root, follow_symlinks=False):
-    for dirpath, dirnames, filenames in os.walk(root, followlinks=follow_symlinks):
+    for dirpath, _dirnames, filenames in os.walk(root, followlinks=follow_symlinks):
         for name in filenames:
             yield Path(dirpath) / name
 
@@ -69,7 +69,7 @@ def cmd_dedupe(args):
             except OSError:
                 pass
     by_hash: dict[str, list[Path]] = defaultdict(list)
-    for size, files in by_size.items():
+    for _size, files in by_size.items():
         if len(files) < 2:
             continue
         for p in files:
@@ -106,7 +106,7 @@ def cmd_search(args):
             continue
         if args.content:
             try:
-                with open(p, "r", encoding="utf-8", errors="ignore") as f:
+                with open(p, encoding="utf-8", errors="ignore") as f:
                     for ln_no, line in enumerate(f, 1):
                         if pat.search(line):
                             print(f"{p}:{ln_no}: {line.rstrip()}")
@@ -298,7 +298,7 @@ def cmd_empty_dirs(args):
     """List (and optionally remove) empty directories."""
     root = Path(args.dir)
     empties: list[Path] = []
-    for dirpath, dirnames, filenames in os.walk(root, topdown=False):
+    for dirpath, _dirnames, _filenames in os.walk(root, topdown=False):
         d = Path(dirpath)
         if not any(d.iterdir()):
             empties.append(d)

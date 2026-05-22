@@ -31,7 +31,6 @@ def test_requires_safe_for_dotted_name(requires):
 import importlib
 
 import pytest
-
 from conftest import _module_names
 
 

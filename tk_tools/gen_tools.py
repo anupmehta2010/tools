@@ -7,8 +7,7 @@ import urllib.request
 from pathlib import Path
 from xml.sax.saxutils import escape as xml_escape
 
-from _common import lazy_import, ensure_dir, tool_main
-
+from _common import ensure_dir, lazy_import, tool_main
 
 _FAVICON_SIZES = [16, 32, 48, 64, 128, 192, 512]
 
@@ -33,7 +32,7 @@ _ANDROID_SIZES = [
 
 
 def _open_image(path: str):
-    PIL = lazy_import("PIL", "pip install Pillow")
+    lazy_import("PIL", "pip install Pillow")
     from PIL import Image
     return Image.open(path).convert("RGBA")
 
@@ -74,7 +73,7 @@ def cmd_app_icon(args):
 
 def cmd_og_image(args):
     """1200x630 OG image: text on solid bg."""
-    PIL = lazy_import("PIL", "pip install Pillow")
+    lazy_import("PIL", "pip install Pillow")
     from PIL import Image, ImageDraw, ImageFont
     W, H = 1200, 630
     bg = args.bg_color

@@ -4,14 +4,12 @@ from __future__ import annotations
 import argparse
 import json
 import math
-import sys
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from _common import lazy_import, human_size, ensure_dir, confirm, tool_main
-
+from _common import lazy_import, tool_main
 
 GPX_NS = "http://www.topografix.com/GPX/1/1"
 KML_NS = "http://www.opengis.net/kml/2.2"
@@ -242,7 +240,7 @@ def cmd_reverse_geocode(args):
 def cmd_exif_gps(args):
     lazy_import("PIL", install_hint="pip install pillow")
     from PIL import Image
-    from PIL.ExifTags import TAGS, GPSTAGS
+    from PIL.ExifTags import GPSTAGS, TAGS
     img = Image.open(args.input)
     exif = getattr(img, "_getexif", lambda: None)()
     if not exif:

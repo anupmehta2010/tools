@@ -3,12 +3,10 @@ from __future__ import annotations
 
 import argparse
 import struct
-import sys
 import wave
 from pathlib import Path
 
-from _common import lazy_import, human_size, ensure_dir, confirm, tool_main
-
+from _common import lazy_import, tool_main
 
 MAGIC = b"STG1"
 

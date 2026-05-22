@@ -161,7 +161,6 @@ def cmd_flip(args):
 
 def cmd_ico(args):
     """Multi-size ICO favicon."""
-    from PIL import Image
     img = _open(args.input).convert("RGBA")
     sizes = [(s, s) for s in args.sizes]
     img.save(args.output, sizes=sizes)
@@ -169,8 +168,7 @@ def cmd_ico(args):
 
 
 def cmd_exif_show(args):
-    from PIL import Image
-    from PIL.ExifTags import TAGS, GPSTAGS
+    from PIL.ExifTags import GPSTAGS, TAGS
     img = _open(args.input)
     exif = getattr(img, "_getexif", lambda: None)()
     if not exif:
@@ -219,7 +217,7 @@ def cmd_palette(args):
         # render a swatch image
         sw = 64
         canvas = Image.new("RGB", (sw * len(counts), sw))
-        for i, (cnt, idx) in enumerate(counts):
+        for i, (_cnt, idx) in enumerate(counts):
             if idx * 3 + 2 >= len(palette):
                 continue
             r, g, b = palette[idx * 3], palette[idx * 3 + 1], palette[idx * 3 + 2]

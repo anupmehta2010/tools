@@ -8,7 +8,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from _common import lazy_import, human_size, ensure_dir, confirm, tool_main
+from _common import ensure_dir, lazy_import, tool_main
 
 
 def _check_ffmpeg():

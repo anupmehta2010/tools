@@ -26,8 +26,14 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from _common import (
-    recipe_save, recipe_load, recipe_list, recipe_delete, emit, validate_recipe, tool_main,)
-
+    emit,
+    recipe_delete,
+    recipe_list,
+    recipe_load,
+    recipe_save,
+    tool_main,
+    validate_recipe,
+)
 
 COMMANDS = {
     "list":   "List saved recipes",
@@ -142,7 +148,11 @@ def run_recipe(recipe: dict, variables: dict | None = None, *, emit_event=None) 
             emit_event("node_start", {"id": sid, "tool": tool, "argv": argv})
 
         # Capture stdout/stderr around the call.
-        import contextlib, io, os, traceback
+        import contextlib
+        import io
+        import os
+        import traceback
+
         from _common import ROOT
         ws = ROOT / "web_workspace"
         ws.mkdir(exist_ok=True)

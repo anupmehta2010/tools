@@ -10,13 +10,11 @@ import secrets
 import shutil
 import struct
 import subprocess
-import sys
 import time
 import urllib.parse
 from pathlib import Path
 
 from _common import lazy_import, tool_main
-
 
 # ---- age ----
 
@@ -54,7 +52,7 @@ def cmd_age_decrypt(args):
 # ---- ssh-keygen ----
 
 def cmd_ssh_keygen(args):
-    crypto = lazy_import("cryptography", "pip install cryptography")
+    lazy_import("cryptography", "pip install cryptography")
     from cryptography.hazmat.primitives import serialization
     from cryptography.hazmat.primitives.asymmetric import ed25519, rsa
     if args.algo == "ed25519":
@@ -187,9 +185,9 @@ def cmd_ecdsa_sign(args):
 
 def cmd_ecdsa_verify(args):
     lazy_import("cryptography", "pip install cryptography")
+    from cryptography.exceptions import InvalidSignature
     from cryptography.hazmat.primitives import hashes, serialization
     from cryptography.hazmat.primitives.asymmetric import ec
-    from cryptography.exceptions import InvalidSignature
     pub = serialization.load_pem_public_key(Path(args.key).read_bytes())
     data = Path(args.input).read_bytes()
     sig = Path(args.signature).read_bytes()
@@ -215,9 +213,9 @@ def cmd_rsa_sign(args):
 
 def cmd_rsa_verify(args):
     lazy_import("cryptography", "pip install cryptography")
+    from cryptography.exceptions import InvalidSignature
     from cryptography.hazmat.primitives import hashes, serialization
     from cryptography.hazmat.primitives.asymmetric import padding
-    from cryptography.exceptions import InvalidSignature
     pub = serialization.load_pem_public_key(Path(args.key).read_bytes())
     data = Path(args.input).read_bytes()
     sig = Path(args.signature).read_bytes()
@@ -233,7 +231,7 @@ def cmd_rsa_verify(args):
 def cmd_x509_info(args):
     lazy_import("cryptography", "pip install cryptography")
     from cryptography import x509
-    from cryptography.hazmat.primitives.asymmetric import rsa, ec
+    from cryptography.hazmat.primitives.asymmetric import ec, rsa
     data = Path(args.input).read_bytes()
     cert = x509.load_pem_x509_certificate(data) if b"BEGIN CERT" in data else x509.load_der_x509_certificate(data)
     print(f"Subject:    {cert.subject.rfc4514_string()}")
@@ -268,7 +266,7 @@ def cmd_pbkdf2(args):
 
 
 def cmd_argon2(args):
-    a2 = lazy_import("argon2", "pip install argon2-cffi")
+    lazy_import("argon2", "pip install argon2-cffi")
     from argon2 import PasswordHasher
     ph = PasswordHasher(time_cost=args.time_cost, memory_cost=args.memory_cost, parallelism=args.parallelism)
     print(ph.hash(args.password))

@@ -7,7 +7,6 @@ from pathlib import Path
 
 from _common import lazy_import, tool_main
 
-
 # ---- Merge / Split ----
 
 def cmd_merge(args):
@@ -160,9 +159,10 @@ def cmd_decrypt(args):
 def cmd_watermark(args):
     pypdf = lazy_import("pypdf")
     lazy_import("reportlab", install_hint="pip install reportlab")
-    from reportlab.pdfgen.canvas import Canvas
-    from reportlab.lib.pagesizes import A4
     import io as _io
+
+    from reportlab.lib.pagesizes import A4
+    from reportlab.pdfgen.canvas import Canvas
     buf = _io.BytesIO()
     c = Canvas(buf, pagesize=A4)
     c.setFillGray(0.7, alpha=0.35)

@@ -18,10 +18,10 @@ import sqlite3
 import sys
 import time
 from collections import deque
+from collections.abc import Iterable
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Iterable
-
+from typing import Any
 
 # ---------------------------------------------------------------- error contract
 
@@ -88,7 +88,7 @@ def lazy_import(module_name: str, install_hint: str | None = None):
         hint = install_hint or f"pip install {module_name}"
         print(f"\n[!] Required module '{module_name}' is not installed.")
         print(f"    Install with: {hint}\n")
-        raise SystemExit(EXIT_MISSING_DEP)
+        raise SystemExit(EXIT_MISSING_DEP) from None
 
 
 def have_module(module_name: str) -> bool:
@@ -447,7 +447,7 @@ def validate_recipe(recipe: dict) -> list[str]:
 
     id_set = set(ids)
     # Build a mapping from synthesized id -> step for depends/cycle checks.
-    sid_map = {ids[i]: s for i, s in enumerate(steps) if isinstance(s, dict)}
+    {ids[i]: s for i, s in enumerate(steps) if isinstance(s, dict)}
     for j, step in enumerate(steps):
         if not isinstance(step, dict):
             continue

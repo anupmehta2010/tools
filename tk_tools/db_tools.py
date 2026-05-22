@@ -25,11 +25,11 @@ def _print_table(cols: list[str], rows: list[tuple], limit: int | None = None) -
     str_rows = [[("" if v is None else str(v)) for v in r] for r in rows]
     widths = [max(len(c), *(len(r[i]) for r in str_rows)) for i, c in enumerate(cols)]
     sep = "-+-".join("-" * w for w in widths)
-    print(" | ".join(c.ljust(w) for c, w in zip(cols, widths)))
+    print(" | ".join(c.ljust(w) for c, w in zip(cols, widths, strict=False)))
     print(sep)
     shown = str_rows[: limit] if limit else str_rows
     for r in shown:
-        print(" | ".join(v.ljust(w) for v, w in zip(r, widths)))
+        print(" | ".join(v.ljust(w) for v, w in zip(r, widths, strict=False)))
     if limit and len(str_rows) > limit:
         print(f"... ({len(str_rows) - limit} more rows)")
 

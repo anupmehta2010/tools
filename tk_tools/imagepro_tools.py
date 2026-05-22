@@ -5,10 +5,9 @@ import argparse
 import json
 import shutil
 import subprocess
-import sys
 from pathlib import Path
 
-from _common import lazy_import, human_size, ensure_dir, confirm, tool_main
+from _common import lazy_import, tool_main
 
 
 def _pil():
@@ -23,7 +22,7 @@ def _cv2():
 
 def cmd_rembg(args):
     rembg = lazy_import("rembg", install_hint="pip install rembg")
-    Image = _pil()
+    _pil()
     inp = Path(args.input)
     out = Path(args.output)
     data = inp.read_bytes()
@@ -44,7 +43,7 @@ def cmd_exif_strip(args):
 
 def cmd_exif_show(args):
     Image = _pil()
-    from PIL.ExifTags import TAGS, GPSTAGS
+    from PIL.ExifTags import GPSTAGS, TAGS
     img = Image.open(args.input)
     exif = getattr(img, "_getexif", lambda: None)()
     out_dict = {}
@@ -118,7 +117,7 @@ def cmd_palette(args):
 
 def cmd_smart_crop(args):
     cv2 = _cv2()
-    Image = _pil()
+    _pil()
     img = cv2.imread(args.input)
     if img is None:
         print(f"[!] Could not read {args.input}")
@@ -188,7 +187,7 @@ def cmd_hdr(args):
     if any(im is None for im in images):
         print("[!] Could not read all inputs")
         return 1
-    times = np.array(args.times, dtype=np.float32) if args.times else np.array(
+    np.array(args.times, dtype=np.float32) if args.times else np.array(
         [1.0 / (2 ** i) for i in range(len(images))], dtype=np.float32)
     align = cv2.createAlignMTB()
     align.process(images, images)

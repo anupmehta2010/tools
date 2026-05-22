@@ -40,7 +40,8 @@ def test_calc_rejects_malicious_input(run_cli):
     assert rc != 0 or "Error" in out or "error" in (out + err).lower()
 
 
-from hypothesis import given, settings, strategies as st
+from hypothesis import given, settings
+from hypothesis import strategies as st
 
 
 @settings(max_examples=50, deadline=None)

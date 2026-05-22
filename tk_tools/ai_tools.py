@@ -11,7 +11,6 @@ from pathlib import Path
 
 from _common import lazy_import, tool_main
 
-
 OLLAMA_URL = "http://localhost:11434/api/generate"
 
 
@@ -25,7 +24,7 @@ def _ollama_generate(prompt: str, model: str) -> str:
     except urllib.error.URLError as e:
         print(f"[!] Could not reach ollama at {OLLAMA_URL}: {e}")
         print("    Make sure ollama is running: `ollama serve`")
-        raise SystemExit(2)
+        raise SystemExit(2) from e
     return data.get("response", "")
 
 

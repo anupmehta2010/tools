@@ -8,7 +8,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from _common import lazy_import, human_size, ensure_dir, confirm, tool_main
+from _common import ensure_dir, lazy_import, tool_main
 
 
 def _check_ffmpeg():
@@ -78,7 +78,7 @@ def cmd_subtitle_extract(args):
 
 
 def cmd_auto_subtitle(args):
-    fw = lazy_import("faster_whisper", install_hint="pip install faster-whisper")
+    lazy_import("faster_whisper", install_hint="pip install faster-whisper")
     from faster_whisper import WhisperModel
     model = WhisperModel(args.model, device=args.device, compute_type=args.compute_type)
     segments, info = model.transcribe(args.input, language=args.language, vad_filter=True)

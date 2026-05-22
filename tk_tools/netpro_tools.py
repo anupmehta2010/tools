@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from http.cookies import SimpleCookie
 from pathlib import Path
 
-from _common import lazy_import, human_size, tool_main
+from _common import human_size, lazy_import, tool_main
 
 UA = "tk/1.0"
 
@@ -66,9 +66,9 @@ def cmd_ssl_info(args):
             print(f"  {kind}: {val}")
     # Try crypto for key/sig details
     try:
-        crypto = lazy_import("cryptography", "pip install cryptography")
+        lazy_import("cryptography", "pip install cryptography")
         from cryptography import x509
-        from cryptography.hazmat.primitives.asymmetric import rsa, ec
+        from cryptography.hazmat.primitives.asymmetric import ec, rsa
         c = x509.load_der_x509_certificate(der)
         print(f"Signature:   {c.signature_hash_algorithm.name if c.signature_hash_algorithm else '?'} / {c.signature_algorithm_oid._name}")
         pub = c.public_key()

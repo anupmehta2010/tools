@@ -4,11 +4,9 @@ from __future__ import annotations
 import argparse
 import json
 import math
-import sys
 from pathlib import Path
 
 from _common import lazy_import, tool_main
-
 
 # ---- ONNX ----
 
@@ -44,7 +42,7 @@ def cmd_onnx_run(args):
 def cmd_classify_image(args):
     oc = lazy_import("open_clip", "pip install open-clip-torch")
     torch = lazy_import("torch", "pip install torch")
-    Image = lazy_import("PIL.Image", "pip install pillow")
+    lazy_import("PIL.Image", "pip install pillow")
     from PIL import Image as I
     model, _, preprocess = oc.create_model_and_transforms(args.model, pretrained=args.pretrained)
     tokenizer = oc.get_tokenizer(args.model)
@@ -56,7 +54,7 @@ def cmd_classify_image(args):
         img_f = model.encode_image(img); img_f /= img_f.norm(dim=-1, keepdim=True)
         txt_f = model.encode_text(text);  txt_f /= txt_f.norm(dim=-1, keepdim=True)
         probs = (100.0 * img_f @ txt_f.T).softmax(dim=-1)[0].tolist()
-    ranked = sorted(zip(labels, probs), key=lambda x: -x[1])
+    ranked = sorted(zip(labels, probs, strict=False), key=lambda x: -x[1])
     for lab, p in ranked:
         print(f"  {p*100:>6.2f}%  {lab.strip()}")
 
@@ -64,7 +62,7 @@ def cmd_classify_image(args):
 # ---- Sentence-transformers text embedding ----
 
 def cmd_embed_text(args):
-    st = lazy_import("sentence_transformers", "pip install sentence-transformers")
+    lazy_import("sentence_transformers", "pip install sentence-transformers")
     from sentence_transformers import SentenceTransformer
     text = args.text if args.text else Path(args.input).read_text(encoding="utf-8")
     model = SentenceTransformer(args.model)
@@ -80,7 +78,7 @@ def cmd_embed_text(args):
 def cmd_embed_image(args):
     oc = lazy_import("open_clip", "pip install open-clip-torch")
     torch = lazy_import("torch", "pip install torch")
-    Image = lazy_import("PIL.Image", "pip install pillow")
+    lazy_import("PIL.Image", "pip install pillow")
     from PIL import Image as I
     model, _, preprocess = oc.create_model_and_transforms(args.model, pretrained=args.pretrained)
     img = preprocess(I.open(args.input).convert("RGB")).unsqueeze(0)
@@ -130,7 +128,7 @@ def _cosine(a, b):
     nb = math.sqrt(sum(x * x for x in b))
     if na == 0 or nb == 0:
         return 0.0
-    return sum(x * y for x, y in zip(a, b)) / (na * nb)
+    return sum(x * y for x, y in zip(a, b, strict=False)) / (na * nb)
 
 
 def cmd_vector_similarity(args):
@@ -146,7 +144,7 @@ def cmd_vector_similarity(args):
 def cmd_vector_search(args):
     query = json.loads(Path(args.query).read_text(encoding="utf-8"))
     results = []
-    with open(args.index, "r", encoding="utf-8") as f:
+    with open(args.index, encoding="utf-8") as f:
         for line in f:
             line = line.strip()
             if not line:

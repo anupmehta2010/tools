@@ -12,11 +12,11 @@ from reportlab.lib.units import cm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (
-    SimpleDocTemplate,
-    Spacer,
+    PageBreak,
     Paragraph,
     Preformatted,
-    PageBreak,
+    SimpleDocTemplate,
+    Spacer,
     Table,
     TableStyle,
 )

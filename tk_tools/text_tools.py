@@ -10,11 +10,11 @@ import html
 import json
 import re
 import sys
+import sys as _sys
 import urllib.parse
 from pathlib import Path
-
-import sys as _sys
 from pathlib import Path as _Path
+
 _sys.path.insert(0, str(_Path(__file__).resolve().parent.parent))
 from _common import tool_main
 

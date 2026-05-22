@@ -14,11 +14,11 @@ from __future__ import annotations
 
 import argparse
 import sys
+import sys as _sys
 import time
 from pathlib import Path
-
-import sys as _sys
 from pathlib import Path as _Path
+
 _sys.path.insert(0, str(_Path(__file__).resolve().parent.parent))
 from _common import tool_main
 
@@ -107,17 +107,18 @@ def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="watch", description="Folder watcher for tk")
     sub = p.add_subparsers(dest="cmd", required=True)
 
-    common = lambda sp: (
-        sp.add_argument("dir", help="directory to watch"),
-        sp.add_argument("--glob", default="*", help="glob pattern (default '*')"),
-        sp.add_argument("--interval", type=float, default=1.0, help="poll interval seconds"),
-        sp.add_argument("--process-existing", action="store_true",
-                        help="also fire for files that exist when watch starts"),
-        sp.add_argument("--once", action="store_true",
-                        help="exit after the first event is processed"),
-        sp.add_argument("--continue-on-error", action="store_true",
-                        help="don't stop the loop when a tool returns non-zero"),
-    )
+    def common(sp):
+        return (
+            sp.add_argument("dir", help="directory to watch"),
+            sp.add_argument("--glob", default="*", help="glob pattern (default '*')"),
+            sp.add_argument("--interval", type=float, default=1.0, help="poll interval seconds"),
+            sp.add_argument("--process-existing", action="store_true",
+                            help="also fire for files that exist when watch starts"),
+            sp.add_argument("--once", action="store_true",
+                            help="exit after the first event is processed"),
+            sp.add_argument("--continue-on-error", action="store_true",
+                            help="don't stop the loop when a tool returns non-zero"),
+        )
 
     sp = sub.add_parser("run", help=COMMANDS["run"])
     common(sp)

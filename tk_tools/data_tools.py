@@ -4,9 +4,9 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import re
 from pathlib import Path
 
-import re
 from _common import lazy_import, tool_main
 
 
@@ -88,7 +88,7 @@ def cmd_xlsx2json(args):
             out[ws.title] = []
             continue
         headers = list(rows[0])
-        data = [dict(zip(headers, r)) for r in rows[1:]]
+        data = [dict(zip(headers, r, strict=False)) for r in rows[1:]]
         out[ws.title] = data
     Path(args.output).write_text(
         json.dumps(out, indent=2, default=str, ensure_ascii=False),
@@ -313,7 +313,7 @@ def cmd_sqlite_query(args):
                 w = csv.writer(f); w.writerow(cols); w.writerows(rows)
             print(f"Wrote {len(rows)} rows -> {args.output}")
         elif args.output:
-            data = [dict(zip(cols, r)) for r in rows]
+            data = [dict(zip(cols, r, strict=False)) for r in rows]
             Path(args.output).write_text(json.dumps(data, indent=2, default=str, ensure_ascii=False),
                                          encoding="utf-8")
             print(f"Wrote {len(rows)} rows -> {args.output}")

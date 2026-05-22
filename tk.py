@@ -123,7 +123,7 @@ def run_category(category: str, argv: list[str]) -> int:
         return 1
 
     # Run + log to history.
-    from _common import log_run, load_config
+    from _common import load_config, log_run
     cfg = load_config()
     cmd = argv[0] if argv else ""
     t0 = time.time()
@@ -179,7 +179,7 @@ def list_all(as_json: bool = False) -> None:
 # ---------------------------------------------------------------- meta: doctor
 
 def cmd_doctor() -> int:
-    from _common import have_module, have_binary, HOME_DIR, CONFIG_FILE, HISTORY_DB
+    from _common import CONFIG_FILE, HISTORY_DB, HOME_DIR, have_binary, have_module
     print()
     print("tk doctor — environment check")
     print("=" * 50)
@@ -257,7 +257,7 @@ def cmd_history(limit: int, as_json: bool) -> int:
 # ---------------------------------------------------------------- meta: preset
 
 def cmd_preset(argv: list[str]) -> int:
-    from _common import preset_save, preset_load, preset_list, preset_delete
+    from _common import preset_delete, preset_list, preset_load, preset_save
     if not argv:
         print("Usage: tk preset save|list|run|delete|show ...")
         return 1
@@ -344,7 +344,7 @@ def cmd_pipe(argv: list[str]) -> int:
 # ---------------------------------------------------------------- meta: plugins
 
 def cmd_plugins() -> int:
-    from _common import discover_plugins, PLUGINS_DIR, LOCAL_PLUGINS_DIR
+    from _common import LOCAL_PLUGINS_DIR, PLUGINS_DIR, discover_plugins
     plugins = discover_plugins()
     print(f"Plugin search dirs:\n  {PLUGINS_DIR}\n  {LOCAL_PLUGINS_DIR}\n")
     if not plugins:

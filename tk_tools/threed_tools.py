@@ -3,20 +3,17 @@ from __future__ import annotations
 
 import argparse
 import json
-import re
 import struct
-import sys
 from pathlib import Path
 
-from _common import lazy_import, human_size, tool_main
-
+from _common import human_size, lazy_import, tool_main
 
 # ---- OBJ parser ----
 
 def _parse_obj(path: Path):
     verts = []; faces = []; objects = set(); materials = set()
     normals = 0; uvs = 0
-    with open(path, "r", encoding="utf-8", errors="replace") as f:
+    with open(path, encoding="utf-8", errors="replace") as f:
         for line in f:
             if not line or line.startswith("#"):
                 continue
@@ -53,7 +50,7 @@ def cmd_obj_info(args):
     print(f"Objects:   {len(objects)}  {sorted(objects)}")
     print(f"Materials: {len(materials)}  {sorted(materials)}")
     if verts:
-        xs, ys, zs = zip(*verts)
+        xs, ys, zs = zip(*verts, strict=False)
         print(f"BBox X:    [{min(xs):.4f}, {max(xs):.4f}]")
         print(f"BBox Y:    [{min(ys):.4f}, {max(ys):.4f}]")
         print(f"BBox Z:    [{min(zs):.4f}, {max(zs):.4f}]")
@@ -226,12 +223,12 @@ def cmd_ply_info(args):
 def cmd_gcode_info(args):
     z_max = float("-inf"); z_min = float("inf"); z_layers = set()
     e_total = 0.0
-    cur_e = 0.0; cur_z = None; cur_xy = (0.0, 0.0)
+    cur_e = 0.0; cur_xy = (0.0, 0.0)
     total_xy = 0.0
     time_estimate = 0.0
     feed = 1500.0  # default mm/min
     lines = 0
-    with open(args.input, "r", encoding="utf-8", errors="replace") as f:
+    with open(args.input, encoding="utf-8", errors="replace") as f:
         for line in f:
             lines += 1
             # strip comment
@@ -252,7 +249,6 @@ def cmd_gcode_info(args):
                     except ValueError:
                         pass
                 if z is not None:
-                    cur_z = z
                     z_layers.add(round(z, 4))
                     if z > z_max: z_max = z
                     if z < z_min: z_min = z
@@ -288,7 +284,7 @@ def cmd_mesh_bbox(args):
         verts, *_ = _parse_obj(path)
         if not verts:
             print("Empty"); return 1
-        xs, ys, zs = zip(*verts)
+        xs, ys, zs = zip(*verts, strict=False)
         print(f"X: [{min(xs):.4f}, {max(xs):.4f}]")
         print(f"Y: [{min(ys):.4f}, {max(ys):.4f}]")
         print(f"Z: [{min(zs):.4f}, {max(zs):.4f}]")

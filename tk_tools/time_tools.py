@@ -10,7 +10,6 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from _common import lazy_import, tool_main
 
-
 # ---- Timezone convert ----
 
 def cmd_tz(args):
@@ -109,7 +108,7 @@ def _parse_duration(s: str) -> float:
         try:
             total = float(s)
         except ValueError:
-            raise ValueError(f"Could not parse duration '{s}'")
+            raise ValueError(f"Could not parse duration '{s}'") from None
     return total
 
 

@@ -13,7 +13,6 @@ from pathlib import Path
 
 from _common import lazy_import, tool_main
 
-
 # ---- Password ----
 
 def cmd_password(args):
@@ -165,7 +164,9 @@ def cmd_decrypt(args):
 
 def cmd_totp(args):
     """Generate a 6-digit TOTP code (RFC 6238) from a base32 secret."""
-    import hmac, struct, time
+    import hmac
+    import struct
+    import time
     secret = args.secret.replace(" ", "").upper()
     secret += "=" * (-len(secret) % 8)
     try:

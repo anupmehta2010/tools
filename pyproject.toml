@@ -1,6 +1,6 @@
 [project]
 name = "tk-tools"
-version = "0.2.0"
+version = "0.3.1"
 description = "Swiss-army CLI + web UI toolkit. 30+ tool categories: pdf, image, media, text, data, archive, crypto, net, fs, dev, qr, oled, ai, doc, code, gen, time, finance, db, pdf-pro, image-pro, audio-pro, video-pro, geo, steg, net-pro, crypto-pro, forensic, embedded, ml, 3d."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -35,6 +35,9 @@ dev = [
     "pytest-playwright",
     "ruff",
 ]
+download = [
+    "yt-dlp",  # `tk dl` video/audio/any-URL downloads (ffmpeg needed for audio extract)
+]
 
 [tool.coverage.run]
 source = ["tk_tools", "_common", "tk", "server"]
@@ -57,6 +60,8 @@ select = ["E", "F", "W", "I", "B", "UP"]
 ignore = [
     "E501",  # line length handled by formatter
     "E402",  # late imports OK (we lazy-import deps)
+    "E701",  # multiple statements on one line (colon) — compact tool style
+    "E702",  # multiple statements on one line (semicolon) — compact tool style
     "E741",  # ambiguous var names (l, I) OK for tools
     "B008",  # function call in default arg
     "UP007", # `X | None` style requires py310+ — fine, but allow Optional

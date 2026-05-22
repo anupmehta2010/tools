@@ -11,13 +11,12 @@ import random
 import re
 import shlex
 import sys
-import unicodedata
-
 import sys as _sys
+import unicodedata
 from pathlib import Path as _Path
+
 _sys.path.insert(0, str(_Path(__file__).resolve().parent.parent))
 from _common import tool_main
-
 
 # ---- Regex ----
 
@@ -346,7 +345,8 @@ def cmd_stats(args):
 
 def cmd_ulid(args):
     """Generate ULIDs (Crockford Base32, 26 chars, time-sortable)."""
-    import os, time
+    import os
+    import time
     ENC = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 
     def encode(n, length):
@@ -408,7 +408,8 @@ def cmd_mock(args):
     if args.format == "json":
         out = json.dumps(rows, indent=2)
     elif args.format == "csv":
-        import csv as _csv, io as _io
+        import csv as _csv
+        import io as _io
         buf = _io.StringIO()
         w = _csv.DictWriter(buf, fieldnames=list(rows[0].keys()))
         w.writeheader(); w.writerows(rows)

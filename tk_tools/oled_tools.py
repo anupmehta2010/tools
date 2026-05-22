@@ -13,7 +13,6 @@ from pathlib import Path
 
 from _common import lazy_import, tool_main
 
-
 # Common display profiles. Add/extend freely.
 DISPLAYS = {
     "ssd1306":      {"width": 128, "height": 64,  "format": "mono",   "name": 'SSD1306 0.96" OLED (mono)'},
@@ -70,7 +69,6 @@ def _resize_for(img, w, h, fit_mode):
 
 
 def _to_mono_bytes(img, threshold=128, dither=True):
-    from PIL import Image
     if dither:
         bw = img.convert("1")
     else:

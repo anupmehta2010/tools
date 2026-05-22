@@ -1,7 +1,6 @@
 """Shared test fixtures for the tk suite."""
 from __future__ import annotations
 
-import importlib
 import subprocess
 import sys
 from pathlib import Path

@@ -5,17 +5,16 @@ import argparse
 import socket
 import subprocess
 import sys
+import sys as _sys
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
-
-import sys as _sys
 from pathlib import Path as _Path
+
 _sys.path.insert(0, str(_Path(__file__).resolve().parent.parent))
 from _common import tool_main
-
 
 # ---- HTTP ----
 
@@ -134,7 +133,7 @@ def cmd_port_scan(args):
                 except OSError:
                     name = "?"
                 print(f"  {port:>5}/tcp open ({name})")
-            except (socket.timeout, ConnectionRefusedError, OSError):
+            except (TimeoutError, ConnectionRefusedError, OSError):
                 pass
     print(f"\n{len(open_ports)}/{len(ports)} ports open")
 
@@ -208,18 +207,19 @@ def cmd_check(args):
 
 def cmd_ssl_info(args):
     """Show TLS certificate info for host:port."""
-    import ssl, socket as _sk
+    import socket as _sk
+    import ssl
     host = args.host
     port = args.port
     ctx = ssl.create_default_context()
     with _sk.create_connection((host, port), timeout=args.timeout) as sock:
         with ctx.wrap_socket(sock, server_hostname=host) as ss:
             cert = ss.getpeercert()
-    print(f"Subject:")
+    print("Subject:")
     for rdn in cert.get("subject", []):
         for k, v in rdn:
             print(f"  {k:<24} {v}")
-    print(f"\nIssuer:")
+    print("\nIssuer:")
     for rdn in cert.get("issuer", []):
         for k, v in rdn:
             print(f"  {k:<24} {v}")

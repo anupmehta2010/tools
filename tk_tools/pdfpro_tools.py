@@ -8,7 +8,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from _common import lazy_import, human_size, ensure_dir, confirm, tool_main
+from _common import ensure_dir, lazy_import, tool_main
 
 
 def cmd_ocr(args):
@@ -29,7 +29,6 @@ def cmd_ocr(args):
     out = Path(args.output)
     if out.suffix.lower() == ".pdf":
         # Build a searchable pdf by concatenating per-page pdfs from pytesseract
-        pdf_bytes = b""
         page_pdfs = []
         for i, img in enumerate(images, 1):
             print(f"  OCR page {i}/{len(images)}")
@@ -67,12 +66,11 @@ def cmd_redact(args):
 
 
 def cmd_sign(args):
-    Image = lazy_import("PIL", install_hint="pip install pillow")
-    from PIL import Image
+    lazy_import("PIL", install_hint="pip install pillow")
     try:
         import pyhanko  # noqa: F401
-        from pyhanko.sign import signers
         from pyhanko.pdf_utils.incremental_writer import IncrementalPdfFileWriter
+        from pyhanko.sign import signers
         # Cryptographic signing path
         if not args.cert:
             print("[!] --cert required for cryptographic sign with pyhanko; doing visible-stamp only")
@@ -162,7 +160,7 @@ def cmd_forms_extract(args):
 
 def cmd_compare(args):
     pdf2image = lazy_import("pdf2image", install_hint="pip install pdf2image (also needs poppler)")
-    PIL = lazy_import("PIL", install_hint="pip install pillow")
+    lazy_import("PIL", install_hint="pip install pillow")
     from PIL import Image, ImageChops
     a_imgs = pdf2image.convert_from_path(args.a, dpi=args.dpi)
     b_imgs = pdf2image.convert_from_path(args.b, dpi=args.dpi)

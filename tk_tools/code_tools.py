@@ -6,11 +6,9 @@ import json
 import re
 import shutil
 import subprocess
-import sys
 from pathlib import Path
 
 from _common import lazy_import, tool_main
-
 
 # ---- Format ----
 

@@ -3,13 +3,12 @@ from __future__ import annotations
 
 import argparse
 import json
-from pathlib import Path
-
 import sys as _sys
+from pathlib import Path
 from pathlib import Path as _Path
-_sys.path.insert(0, str(_Path(__file__).resolve().parent.parent))
-from _common import tool_main, lazy_import, TkError, EXIT_USER_ERROR
 
+_sys.path.insert(0, str(_Path(__file__).resolve().parent.parent))
+from _common import EXIT_USER_ERROR, TkError, lazy_import, tool_main
 
 # ---- shared yt-dlp helpers ----
 
@@ -49,7 +48,7 @@ def _run_download(url, opts, label="download"):
         with _ydl(opts) as ydl:
             return ydl.download([url])
     except yt_dlp.utils.DownloadError as e:
-        raise TkError(f"{label} failed: {e}", code=EXIT_USER_ERROR)
+        raise TkError(f"{label} failed: {e}", code=EXIT_USER_ERROR) from e
 
 
 # ---- commands ----

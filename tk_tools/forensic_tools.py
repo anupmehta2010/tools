@@ -7,13 +7,11 @@ import hashlib
 import math
 import re
 import struct
-import sys
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 
-from _common import lazy_import, human_size, ensure_dir, tool_main
-
+from _common import ensure_dir, human_size, lazy_import, tool_main
 
 # ---- Magic table ----
 
@@ -278,7 +276,7 @@ def cmd_metadata_strip(args):
     inp = Path(args.input); outp = Path(args.output)
     ext = inp.suffix.lower()
     if ext in (".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"):
-        Image = lazy_import("PIL.Image", "pip install pillow")
+        lazy_import("PIL.Image", "pip install pillow")
         from PIL import Image as I
         img = I.open(inp)
         data = list(img.getdata())

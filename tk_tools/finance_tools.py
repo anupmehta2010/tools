@@ -3,14 +3,12 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
 
 from _common import lazy_import, tool_main
-
 
 _RATES_URL = "https://api.exchangerate.host"
 
@@ -21,7 +19,7 @@ def _fetch_json(url: str) -> dict:
             return json.loads(r.read().decode("utf-8"))
     except urllib.error.URLError as e:
         print(f"[!] Network error: {e}")
-        raise SystemExit(2)
+        raise SystemExit(2) from e
 
 
 # ---- Currency convert ----

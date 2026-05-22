@@ -210,7 +210,8 @@ def test_validate_config_flags_int_for_bool_key():
 
 
 def test_recipes_validate_cli_good(tmp_path):
-    import json, subprocess
+    import json
+    import subprocess
     recipe = {"name": "ok", "steps": [{"id": "n1", "tool": "dev:calc", "argv": ["2+2"]}]}
     f = tmp_path / "r.json"
     f.write_text(json.dumps(recipe), encoding="utf-8")
@@ -223,7 +224,8 @@ def test_recipes_validate_cli_good(tmp_path):
 
 
 def test_recipes_validate_cli_bad(tmp_path):
-    import json, subprocess
+    import json
+    import subprocess
     recipe = {"name": "bad", "steps": [{"id": "n1", "tool": "nope", "argv": []}]}
     f = tmp_path / "r.json"
     f.write_text(json.dumps(recipe), encoding="utf-8")

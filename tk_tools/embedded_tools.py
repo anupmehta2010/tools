@@ -7,8 +7,7 @@ import sys
 import zlib
 from pathlib import Path
 
-from _common import lazy_import, human_size, tool_main
-
+from _common import human_size, lazy_import, tool_main
 
 # ---- hexview ----
 
@@ -154,7 +153,7 @@ ASCII_PLUS = ASCII_PRINT + "".join(chr(c) for c in range(0xa1, 0xff))
 
 
 def cmd_font2bmp(args):
-    Image = lazy_import("PIL.Image", "pip install pillow")
+    lazy_import("PIL.Image", "pip install pillow")
     from PIL import Image, ImageDraw, ImageFont
     glyphs_map = {"ASCII": ASCII_PRINT, "ASCII+": ASCII_PLUS}
     glyphs = glyphs_map.get(args.glyphs, args.glyphs)

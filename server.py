@@ -30,6 +30,7 @@ Endpoints:
 from __future__ import annotations
 
 import argparse
+import argparse as _ap
 import contextlib
 import http.server
 import importlib
@@ -49,8 +50,6 @@ import urllib.parse
 import uuid
 import webbrowser
 from pathlib import Path
-
-import argparse as _ap
 
 ROOT = Path(__file__).parent
 WEB = ROOT / "web"
@@ -404,7 +403,7 @@ def _ai_chat(req: dict) -> dict:
 
     # System prompt: enumerate available tools so model can suggest [[run cat:cmd args]].
     cats_summary = []
-    for cat, info in list(get_categories().items())[:40]:
+    for cat, _info in list(get_categories().items())[:40]:
         cmds = list_commands(cat)
         names = ", ".join(c["name"] for c in cmds if "name" in c)[:200]
         cats_summary.append(f"- {cat}: {names}")
@@ -730,7 +729,7 @@ class APIHandler(http.server.BaseHTTPRequestHandler):
     def _sse_send(self, kind: str, data):
         try:
             payload = data if isinstance(data, str) else json.dumps(data, default=str)
-            chunk = f"event: {kind}\ndata: {payload}\n\n".encode("utf-8")
+            chunk = f"event: {kind}\ndata: {payload}\n\n".encode()
             self.wfile.write(chunk)
             self.wfile.flush()
         except (BrokenPipeError, ConnectionResetError):
@@ -755,7 +754,7 @@ class APIHandler(http.server.BaseHTTPRequestHandler):
             "/api/upload":     {"post": {"summary": "Upload files (multipart)", "responses": {"200": {"description": "ok"}}}},
         }
         # Per-tool endpoints (synthetic) for discoverability:
-        for cat, info in get_categories().items():
+        for cat, _info in get_categories().items():
             for c in list_commands(cat):
                 if "error" in c:
                     continue
@@ -786,7 +785,7 @@ class APIHandler(http.server.BaseHTTPRequestHandler):
         }
 
     def _doctor_report(self):
-        from _common import have_module, have_binary
+        from _common import have_binary, have_module
         mods = [
             "pypdf", "PIL", "reportlab", "markdown", "openpyxl", "yaml", "tomli",
             "cryptography", "requests", "dns", "jwt", "qrcode", "pyzbar", "librosa",
@@ -1024,7 +1023,7 @@ class APIHandler(http.server.BaseHTTPRequestHandler):
             return
 
         if path == "/api/config":
-            from _common import save_config, load_config
+            from _common import load_config, save_config
             req = self._json(body)
             if req is None:
                 return
