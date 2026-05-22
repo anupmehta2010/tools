@@ -27,8 +27,8 @@ jobs:
       - name: Ruff format check
         run: ruff format --check . || true
 
-  smoke:
-    name: Smoke test (${{ matrix.os }} / py${{ matrix.python }})
+  core:
+    name: Core tests (${{ matrix.os }} / py${{ matrix.python }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -41,34 +41,60 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
           cache: pip
-      - name: Install minimal deps
-        run: python -m pip install --upgrade pip
-      - name: Import every module
-        shell: bash
+      - name: Install test deps
         run: |
-          set -e
-          for mod in _common pdf_tools image_tools media_tools text_tools data_tools archive_tools crypto_tools net_tools fs_tools dev_tools qr_tools oled_tools convert_tools server tk; do
-            echo "::group::import $mod"
-            python -c "import $mod" || (echo "FAIL: $mod" && exit 1)
-            echo "::endgroup::"
-          done
-      - name: tk --help
-        run: python tk.py --help
-      - name: tk list
-        run: python tk.py list
-      - name: Smoke — text hash
+          python -m pip install --upgrade pip
+          pip install pytest pytest-cov hypothesis
+      - name: Run core lane (stdlib-only) with coverage gate
+        run: python -m pytest tests/ --ignore=tests/e2e --cov --cov-report=term-missing --cov-fail-under=25 -q
+
+  full:
+    name: Full tests (optional deps, best-effort)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install system deps
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg pandoc tesseract-ocr
+      - name: Install python deps
         run: |
-          python -c "print('hello world')" > tmp.txt
-          python tk.py text hash --algo sha256 -i tmp.txt
-      - name: Smoke — dev calc
-        run: python tk.py dev calc "2 + 2 * 5"
-      - name: Smoke — crypto password
-        run: python tk.py crypto password --length 16 --count 2
+          python -m pip install --upgrade pip
+          pip install pytest hypothesis
+          pip install -r requirements.txt || true
+      - name: Run full lane (best-effort)
+        continue-on-error: true
+        run: python -m pytest tests/ --ignore=tests/e2e -q
+
+  e2e:
+    name: E2E tests (playwright, best-effort)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install playwright deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-playwright
+          python -m playwright install --with-deps chromium
+      - name: Run e2e lane (best-effort)
+        continue-on-error: true
+        run: |
+          if [ -d tests/e2e ]; then
+            python -m pytest tests/e2e -q
+          else
+            echo "tests/e2e does not exist yet — skipping"
+          fi
 
   build-binary:
     name: Build standalone binary
     runs-on: ${{ matrix.os }}
-    needs: [lint, smoke]
+    needs: [lint, core]
     if: startsWith(github.ref, 'refs/tags/v')
     strategy:
       fail-fast: false

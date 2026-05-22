@@ -27,6 +27,27 @@ Issues   = "https://github.com/anupmehta2010/tools/issues"
 [project.scripts]
 tk = "tk:main"
 
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "hypothesis",
+    "pytest-playwright",
+    "ruff",
+]
+
+[tool.coverage.run]
+source = ["tk_tools", "_common", "tk", "server"]
+omit = ["tests/*", "*/__main__.py"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "raise SystemExit",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+]
+
 [tool.ruff]
 line-length = 110
 target-version = "py310"
