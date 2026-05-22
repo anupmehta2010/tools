@@ -1,6 +1,6 @@
 [project]
 name = "tk-tools"
-version = "0.3.1"
+version = "0.3.2"
 description = "Swiss-army CLI + web UI toolkit. 30+ tool categories: pdf, image, media, text, data, archive, crypto, net, fs, dev, qr, oled, ai, doc, code, gen, time, finance, db, pdf-pro, image-pro, audio-pro, video-pro, geo, steg, net-pro, crypto-pro, forensic, embedded, ml, 3d."
 readme = "README.md"
 requires-python = ">=3.10"
