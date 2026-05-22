@@ -17,6 +17,7 @@ import os
 import sqlite3
 import sys
 import time
+from collections import deque
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterable
@@ -396,7 +397,7 @@ def validate_recipe(recipe: dict) -> list[str]:
                 errors.append(f"{where}: duplicate id")
             ids.append(sid)
 
-        tool = step.get("tool", "")
+        tool = step.get("tool") or ""
         if ":" not in tool:
             errors.append(f"{where}: 'tool' must be 'category:command', got {tool!r}")
         else:
@@ -424,7 +425,6 @@ def validate_recipe(recipe: dict) -> list[str]:
         for dep in s.get("depends", []) or []:
             if s.get("id") in indeg and dep in indeg:
                 indeg[s["id"]] += 1
-    from collections import deque
     q = deque([k for k, v in indeg.items() if v == 0])
     seen = 0
     while q:

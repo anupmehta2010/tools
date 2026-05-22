@@ -146,3 +146,27 @@ def test_validate_recipe_flags_cycle():
         ],
     })
     assert any("cycle" in e.lower() for e in errs)
+
+
+def test_validate_recipe_handles_null_tool():
+    import _common
+    errs = _common.validate_recipe(
+        {"name": "x", "steps": [{"id": "n1", "tool": None, "argv": []}]}
+    )
+    # Must not raise; must flag the bad tool.
+    assert any("tool" in e for e in errs)
+
+
+def test_validate_recipe_unknown_category_with_known_set(monkeypatch):
+    """Environment-independent: force a known category set via tk."""
+    import _common
+    import tk
+    monkeypatch.setattr(tk, "available_categories", lambda: {"dev": ("x", "y", "z")})
+    errs = _common.validate_recipe(
+        {"name": "x", "steps": [{"id": "n1", "tool": "notacat:foo", "argv": []}]}
+    )
+    assert any("notacat" in e for e in errs)
+    errs2 = _common.validate_recipe(
+        {"name": "x", "steps": [{"id": "n1", "tool": "dev:calc", "argv": ["2+2"]}]}
+    )
+    assert errs2 == []
