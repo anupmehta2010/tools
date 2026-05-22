@@ -156,6 +156,39 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "history_keep": 500,
 }
 
+CONFIG_SCHEMA: dict[str, type] = {
+    "theme": str,
+    "workspace": str,
+    "server_host": str,
+    "server_port": int,
+    "open_browser": bool,
+    "ollama_host": str,
+    "ollama_model": str,
+    "ffmpeg_path": str,
+    "history_enabled": bool,
+    "history_keep": int,
+}
+
+
+def validate_config(cfg: dict) -> list[str]:
+    """Return warnings (not fatal): unknown keys and wrong value types."""
+    warnings: list[str] = []
+    for key, value in cfg.items():
+        if key not in CONFIG_SCHEMA:
+            warnings.append(f"unknown config key '{key}'")
+            continue
+        expected = CONFIG_SCHEMA[key]
+        # bool is a subclass of int; check bool first to avoid false matches.
+        if expected is bool and not isinstance(value, bool):
+            warnings.append(f"config '{key}' should be a boolean")
+        elif expected is int and isinstance(value, bool):
+            warnings.append(f"config '{key}' should be an integer, got boolean")
+        elif expected is int and not isinstance(value, int):
+            warnings.append(f"config '{key}' should be an integer")
+        elif expected is str and not isinstance(value, str):
+            warnings.append(f"config '{key}' should be a string")
+    return warnings
+
 
 def load_config() -> dict[str, Any]:
     cfg = dict(DEFAULT_CONFIG)
@@ -172,6 +205,8 @@ def load_config() -> dict[str, Any]:
                 cfg.update(tomllib.load(f))
         except Exception:
             pass
+    for w in validate_config(cfg):
+        print(f"[config] {w}", file=sys.stderr)
     return cfg
 
 

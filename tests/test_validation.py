@@ -170,3 +170,24 @@ def test_validate_recipe_unknown_category_with_known_set(monkeypatch):
         {"name": "x", "steps": [{"id": "n1", "tool": "dev:calc", "argv": ["2+2"]}]}
     )
     assert errs2 == []
+
+
+def test_validate_config_accepts_defaults():
+    import _common
+    assert _common.validate_config(dict(_common.DEFAULT_CONFIG)) == []
+
+
+def test_validate_config_flags_unknown_key():
+    import _common
+    cfg = dict(_common.DEFAULT_CONFIG)
+    cfg["bogus_key"] = 1
+    warnings = _common.validate_config(cfg)
+    assert any("bogus_key" in w for w in warnings)
+
+
+def test_validate_config_flags_wrong_type():
+    import _common
+    cfg = dict(_common.DEFAULT_CONFIG)
+    cfg["server_port"] = "not-a-number"
+    warnings = _common.validate_config(cfg)
+    assert any("server_port" in w for w in warnings)
