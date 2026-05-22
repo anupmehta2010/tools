@@ -9,6 +9,7 @@ Includes:
 """
 from __future__ import annotations
 
+import functools
 import importlib
 import importlib.util
 import json
@@ -37,7 +38,7 @@ class TkError(Exception):
         self.code = code
 
 
-def _debug_enabled(argv) -> bool:
+def _debug_enabled(argv: list[str] | None) -> bool:
     if os.environ.get("TK_DEBUG"):
         return True
     return bool(argv) and "--debug" in argv
@@ -53,8 +54,6 @@ def tool_main(category: str):
       when --debug is passed or TK_DEBUG is set.
     """
     def decorator(func):
-        import functools
-
         @functools.wraps(func)
         def wrapper(argv=None):
             try:

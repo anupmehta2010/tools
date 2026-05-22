@@ -72,3 +72,15 @@ def test_tool_main_shows_traceback_with_debug(capsys, monkeypatch):
     rc = main([])
     assert rc == 1
     assert "Traceback" in capsys.readouterr().err
+
+
+def test_tool_main_shows_traceback_with_debug_argv(capsys):
+    import _common
+
+    @_common.tool_main("demo")
+    def main(argv=None):
+        raise ValueError("kaboom")
+
+    rc = main(["--debug"])
+    assert rc == 1
+    assert "Traceback" in capsys.readouterr().err
