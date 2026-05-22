@@ -33,7 +33,8 @@ def run_cli():
     def _run(args: list[str], stdin: str | None = None, timeout: int = 60):
         proc = subprocess.run(
             [sys.executable, str(ROOT / "tk.py"), *args],
-            input=stdin, capture_output=True, text=True, timeout=timeout,
+            input=stdin, capture_output=True, text=True,
+            encoding="utf-8", errors="replace", timeout=timeout,
         )
         return proc.returncode, proc.stdout, proc.stderr
     return _run
@@ -49,5 +50,10 @@ def requires():
     import _common
 
     def _check(dep: str) -> bool:
-        return _common.have_module(dep) or _common.have_binary(dep)
+        try:
+            if _common.have_module(dep):
+                return True
+        except (ModuleNotFoundError, ValueError):
+            pass
+        return _common.have_binary(dep)
     return _check
