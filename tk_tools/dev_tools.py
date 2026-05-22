@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import argparse
+import ast as _ast
 import datetime as dt
 import json
 import math
+import operator as _operator
 import random
 import re
 import shlex
@@ -159,13 +161,49 @@ def cmd_base(args):
 
 # ---- Calculator ----
 
+_CALC_BINOPS = {
+    _ast.Add: _operator.add, _ast.Sub: _operator.sub, _ast.Mult: _operator.mul,
+    _ast.Div: _operator.truediv, _ast.FloorDiv: _operator.floordiv,
+    _ast.Mod: _operator.mod, _ast.Pow: _operator.pow,
+}
+_CALC_UNARY = {_ast.UAdd: _operator.pos, _ast.USub: _operator.neg}
+
+
+def _calc_eval(node, names):
+    if isinstance(node, _ast.Expression):
+        return _calc_eval(node.body, names)
+    if isinstance(node, _ast.Constant):
+        if isinstance(node.value, (int, float, complex)):
+            return node.value
+        raise ValueError("only numeric constants allowed")
+    if isinstance(node, _ast.BinOp) and type(node.op) in _CALC_BINOPS:
+        return _CALC_BINOPS[type(node.op)](_calc_eval(node.left, names), _calc_eval(node.right, names))
+    if isinstance(node, _ast.UnaryOp) and type(node.op) in _CALC_UNARY:
+        return _CALC_UNARY[type(node.op)](_calc_eval(node.operand, names))
+    if isinstance(node, _ast.Name):
+        if node.id in names:
+            return names[node.id]
+        raise ValueError(f"unknown name: {node.id}")
+    if isinstance(node, _ast.Call):
+        if not isinstance(node.func, _ast.Name) or node.func.id not in names:
+            raise ValueError("calls limited to allowed math functions")
+        func = names[node.func.id]
+        if not callable(func):
+            raise ValueError(f"not callable: {node.func.id}")
+        if node.keywords:
+            raise ValueError("keyword args not allowed")
+        return func(*[_calc_eval(a, names) for a in node.args])
+    raise ValueError("disallowed expression")
+
+
 def cmd_calc(args):
     expr = " ".join(args.expression)
     allowed = {k: getattr(math, k) for k in dir(math) if not k.startswith("_")}
     allowed.update({"abs": abs, "round": round, "min": min, "max": max,
                     "sum": sum, "pow": pow, "int": int, "float": float})
     try:
-        result = eval(expr, {"__builtins__": {}}, allowed)
+        tree = _ast.parse(expr, mode="eval")
+        result = _calc_eval(tree, allowed)
         print(result)
     except Exception as e:
         print(f"Error: {e}")

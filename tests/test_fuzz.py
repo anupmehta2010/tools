@@ -58,3 +58,30 @@ def test_calc_never_crashes(expr):
     # robustness guarantee is the no-Traceback assertion below.
     assert proc.returncode in (0, 1, 2), f"expr={expr!r} rc={proc.returncode} stderr={proc.stderr}"
     assert "Traceback" not in proc.stderr
+
+
+def test_calc_blocks_dunder_escape(run_cli):
+    """eval sandbox escape via attribute traversal must be blocked."""
+    rc, out, err = run_cli(["dev", "calc", "(1).__class__.__bases__[0].__subclasses__()"])
+    assert "subclasses" not in out.lower()
+    assert "wrap_close" not in out.lower()
+    assert "<class" not in out
+    assert rc == 1
+
+
+def test_calc_blocks_attribute_access(run_cli):
+    rc, out, err = run_cli(["dev", "calc", "().__class__"])
+    assert "<class" not in out
+    assert "type" not in out.lower() or rc == 1
+    assert rc == 1
+
+
+def test_calc_still_does_real_math(run_cli):
+    rc, out, err = run_cli(["dev", "calc", "2 + 2 * 5"])
+    assert rc == 0 and "12" in out
+    rc, out, err = run_cli(["dev", "calc", "sqrt(16)"])
+    assert rc == 0 and "4" in out
+    rc, out, err = run_cli(["dev", "calc", "pi"])
+    assert rc == 0 and "3.14" in out
+    rc, out, err = run_cli(["dev", "calc", "max(3, 7, 1)"])
+    assert rc == 0 and "7" in out
