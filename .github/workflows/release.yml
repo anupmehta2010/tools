@@ -9,13 +9,51 @@ permissions:
   contents: write
 
 jobs:
-  release:
-    runs-on: ubuntu-latest
+  build:
+    name: Build binary (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            asset: tk-linux-x86_64
+          - os: windows-latest
+            asset: tk-windows-x86_64.exe
+          - os: macos-latest
+            asset: tk-macos-arm64
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyinstaller
+      - name: Build
+        run: pyinstaller --onefile --name tk tk.py
+      - name: Rename (Unix)
+        if: runner.os != 'Windows'
+        run: mv dist/tk "dist/${{ matrix.asset }}"
+      - name: Rename (Windows)
+        if: runner.os == 'Windows'
+        run: Move-Item dist/tk.exe "dist/${{ matrix.asset }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: dist/${{ matrix.asset }}
+
+  release:
+    name: Publish release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
           draft: false
           prerelease: false
+          files: dist/*
