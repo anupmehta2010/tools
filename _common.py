@@ -360,6 +360,89 @@ def recipe_delete(name: str) -> bool:
     return False
 
 
+def validate_recipe(recipe: dict) -> list[str]:
+    """Return a list of human-readable problems. Empty list == valid.
+
+    Checks: steps present and a list; each step has a unique id; tool is
+    'category:command'; the category exists; argv or args present; depends
+    references resolve; the dependency graph is acyclic.
+    """
+    errors: list[str] = []
+    if not isinstance(recipe, dict):
+        return ["recipe must be a JSON object"]
+
+    steps = recipe.get("steps")
+    if not isinstance(steps, list) or not steps:
+        return ["recipe must have a non-empty 'steps' list"]
+
+    try:
+        import tk
+        known_cats = set(tk.available_categories())
+    except Exception:
+        known_cats = set()
+
+    ids: list[str] = []
+    for i, step in enumerate(steps):
+        where = f"step {i}"
+        if not isinstance(step, dict):
+            errors.append(f"{where}: must be an object")
+            continue
+        sid = step.get("id")
+        if not sid:
+            errors.append(f"{where}: missing 'id'")
+        else:
+            where = f"step '{sid}'"
+            if sid in ids:
+                errors.append(f"{where}: duplicate id")
+            ids.append(sid)
+
+        tool = step.get("tool", "")
+        if ":" not in tool:
+            errors.append(f"{where}: 'tool' must be 'category:command', got {tool!r}")
+        else:
+            cat = tool.split(":", 1)[0]
+            if known_cats and cat not in known_cats:
+                errors.append(f"{where}: unknown category '{cat}'")
+
+        if "argv" not in step and "args" not in step:
+            errors.append(f"{where}: needs 'argv' or 'args'")
+
+    id_set = set(ids)
+    for step in steps:
+        if not isinstance(step, dict):
+            continue
+        sid = step.get("id", "?")
+        for dep in step.get("depends", []) or []:
+            if dep not in id_set:
+                errors.append(f"step '{sid}': depends on unknown step '{dep}'")
+
+    # Cycle detection (Kahn's algorithm over the declared edges).
+    indeg = {s.get("id"): 0 for s in steps if isinstance(s, dict) and s.get("id")}
+    for s in steps:
+        if not isinstance(s, dict):
+            continue
+        for dep in s.get("depends", []) or []:
+            if s.get("id") in indeg and dep in indeg:
+                indeg[s["id"]] += 1
+    from collections import deque
+    q = deque([k for k, v in indeg.items() if v == 0])
+    seen = 0
+    while q:
+        cur = q.popleft()
+        seen += 1
+        for s in steps:
+            if isinstance(s, dict) and cur in (s.get("depends", []) or []):
+                tgt = s.get("id")
+                if tgt in indeg:
+                    indeg[tgt] -= 1
+                    if indeg[tgt] == 0:
+                        q.append(tgt)
+    if indeg and seen != len(indeg):
+        errors.append("recipe has a dependency cycle")
+
+    return errors
+
+
 # ---------------------------------------------------------------- webhooks
 
 import secrets as _secrets

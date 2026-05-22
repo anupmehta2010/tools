@@ -84,3 +84,65 @@ def test_tool_main_shows_traceback_with_debug_argv(capsys):
     rc = main(["--debug"])
     assert rc == 1
     assert "Traceback" in capsys.readouterr().err
+
+
+def test_validate_recipe_accepts_good():
+    import _common
+    recipe = {
+        "name": "ok",
+        "steps": [
+            {"id": "n1", "tool": "dev:calc", "argv": ["2+2"]},
+            {"id": "n2", "tool": "dev:slug", "argv": ["hi"], "depends": ["n1"]},
+        ],
+    }
+    assert _common.validate_recipe(recipe) == []
+
+
+def test_validate_recipe_flags_missing_steps():
+    import _common
+    errs = _common.validate_recipe({"name": "x"})
+    assert any("steps" in e for e in errs)
+
+
+def test_validate_recipe_flags_bad_tool_format():
+    import _common
+    errs = _common.validate_recipe(
+        {"name": "x", "steps": [{"id": "n1", "tool": "nocolon", "argv": []}]}
+    )
+    assert any("tool" in e for e in errs)
+
+
+def test_validate_recipe_flags_unknown_category():
+    import _common
+    errs = _common.validate_recipe(
+        {"name": "x", "steps": [{"id": "n1", "tool": "notacat:foo", "argv": []}]}
+    )
+    assert any("notacat" in e for e in errs)
+
+
+def test_validate_recipe_flags_missing_argv_and_args():
+    import _common
+    errs = _common.validate_recipe(
+        {"name": "x", "steps": [{"id": "n1", "tool": "dev:calc"}]}
+    )
+    assert any("argv" in e or "args" in e for e in errs)
+
+
+def test_validate_recipe_flags_bad_dependency_ref():
+    import _common
+    errs = _common.validate_recipe(
+        {"name": "x", "steps": [{"id": "n1", "tool": "dev:calc", "argv": [], "depends": ["ghost"]}]}
+    )
+    assert any("ghost" in e for e in errs)
+
+
+def test_validate_recipe_flags_cycle():
+    import _common
+    errs = _common.validate_recipe({
+        "name": "x",
+        "steps": [
+            {"id": "a", "tool": "dev:calc", "argv": [], "depends": ["b"]},
+            {"id": "b", "tool": "dev:calc", "argv": [], "depends": ["a"]},
+        ],
+    })
+    assert any("cycle" in e.lower() for e in errs)
