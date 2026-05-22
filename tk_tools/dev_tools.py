@@ -161,10 +161,18 @@ def cmd_base(args):
 
 # ---- Calculator ----
 
+def _calc_pow(base, exp):
+    # Guard against DoS: huge exponents produce enormous integers that hang the
+    # process. calc is reachable via the web /api/run endpoint, so cap it.
+    if isinstance(exp, (int, float)) and abs(exp) > 1000:
+        raise ValueError("exponent too large (max 1000)")
+    return _operator.pow(base, exp)
+
+
 _CALC_BINOPS = {
     _ast.Add: _operator.add, _ast.Sub: _operator.sub, _ast.Mult: _operator.mul,
     _ast.Div: _operator.truediv, _ast.FloorDiv: _operator.floordiv,
-    _ast.Mod: _operator.mod, _ast.Pow: _operator.pow,
+    _ast.Mod: _operator.mod, _ast.Pow: _calc_pow,
 }
 _CALC_UNARY = {_ast.UAdd: _operator.pos, _ast.USub: _operator.neg}
 

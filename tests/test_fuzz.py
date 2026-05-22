@@ -85,3 +85,19 @@ def test_calc_still_does_real_math(run_cli):
     assert rc == 0 and "3.14" in out
     rc, out, err = run_cli(["dev", "calc", "max(3, 7, 1)"])
     assert rc == 0 and "7" in out
+
+
+def test_calc_rejects_huge_exponent(run_cli):
+    """Unbounded ** is a DoS (reachable via /api/run); large exponents must be rejected fast."""
+    rc, out, err = run_cli(["dev", "calc", "9**9**9"], )
+    assert rc == 1
+    assert "Traceback" not in err
+    rc, out, err = run_cli(["dev", "calc", "2**999999"])
+    assert rc == 1
+
+
+def test_calc_allows_reasonable_exponent(run_cli):
+    rc, out, err = run_cli(["dev", "calc", "2**10"])
+    assert rc == 0 and "1024" in out
+    rc, out, err = run_cli(["dev", "calc", "2**1000"])
+    assert rc == 0  # ~302 digits, fine
