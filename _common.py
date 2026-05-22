@@ -156,6 +156,8 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "history_keep": 500,
 }
 
+_warned_config: set[str] = set()
+
 CONFIG_SCHEMA: dict[str, type] = {
     "theme": str,
     "workspace": str,
@@ -206,7 +208,9 @@ def load_config() -> dict[str, Any]:
         except Exception:
             pass
     for w in validate_config(cfg):
-        print(f"[config] {w}", file=sys.stderr)
+        if w not in _warned_config:
+            _warned_config.add(w)
+            print(f"[config] {w}", file=sys.stderr)
     return cfg
 
 

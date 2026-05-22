@@ -191,3 +191,19 @@ def test_validate_config_flags_wrong_type():
     cfg["server_port"] = "not-a-number"
     warnings = _common.validate_config(cfg)
     assert any("server_port" in w for w in warnings)
+
+
+def test_validate_config_flags_bool_for_int_key():
+    import _common
+    cfg = dict(_common.DEFAULT_CONFIG)
+    cfg["server_port"] = True
+    warnings = _common.validate_config(cfg)
+    assert any("server_port" in w and "boolean" in w for w in warnings)
+
+
+def test_validate_config_flags_int_for_bool_key():
+    import _common
+    cfg = dict(_common.DEFAULT_CONFIG)
+    cfg["open_browser"] = 1
+    warnings = _common.validate_config(cfg)
+    assert any("open_browser" in w and "boolean" in w for w in warnings)
