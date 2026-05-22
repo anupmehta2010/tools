@@ -57,6 +57,7 @@ CATEGORIES: dict[str, tuple[str, str, str]] = {
     "archive":     ("tk_tools.archive_tools",    "Archives: zip/tar create + extract",                     "📦"),
     "crypto":      ("tk_tools.crypto_tools",     "Passwords, UUIDs, file hash, JWT, Fernet encrypt",       "🔐"),
     "net":         ("tk_tools.net_tools",        "HTTP, DNS, ping, port-scan, download, my-ip, whois",     "🌐"),
+    "dl":          ("tk_tools.dl_tools",         "Download video/audio/any URL via yt-dlp (YouTube +1800)", "⬇️"),
     "fs":          ("tk_tools.fs_tools",         "Bulk rename, dedupe, search, disk usage, sysinfo",       "📁"),
     "dev":         ("tk_tools.dev_tools",        "Regex, color, lorem, base, calc, timestamp, slug",       "⚙️"),
     "qr":          ("tk_tools.qr_tools",         "QR codes: generate and decode",                          "📱"),

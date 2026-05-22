@@ -1,6 +1,6 @@
 # CLAUDE.md — tk Developer & Architecture Guide
 
-`tk` is a personal all-in-one CLI toolkit and web UI: 36 built-in tool categories, a stdlib HTTP server, an MCP server, and a plugin system.
+`tk` is a personal all-in-one CLI toolkit and web UI: 37 built-in tool categories, a stdlib HTTP server, an MCP server, and a plugin system.
 
 ---
 
@@ -18,7 +18,7 @@ tests/             Pytest suite (catalog, golden, fuzz, API, validation, smoke, 
 
 ### `tk.py` — entry point and CATEGORIES
 
-`CATEGORIES` is a `dict[str, tuple[str, str, str]]` mapping a stable CLI/URL slug to `(module_dotted_path, label, icon)`. There are **36 built-in categories** (lines 50–89). Example:
+`CATEGORIES` is a `dict[str, tuple[str, str, str]]` mapping a stable CLI/URL slug to `(module_dotted_path, label, icon)`. There are **37 built-in categories** (lines 50–90). Example:
 
 ```python
 CATEGORIES = {
