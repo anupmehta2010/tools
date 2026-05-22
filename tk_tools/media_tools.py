@@ -7,6 +7,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parent.parent))
+from _common import tool_main
+
 
 def _check_ffmpeg():
     if shutil.which("ffmpeg") is None:
@@ -266,6 +271,7 @@ def build_parser(parser=None):
     return parser
 
 
+@tool_main("media")
 def main(argv=None):
     parser = build_parser()
     args = parser.parse_args(argv)

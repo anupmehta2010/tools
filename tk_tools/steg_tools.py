@@ -7,7 +7,7 @@ import sys
 import wave
 from pathlib import Path
 
-from _common import lazy_import, human_size, ensure_dir, confirm
+from _common import lazy_import, human_size, ensure_dir, confirm, tool_main
 
 
 MAGIC = b"STG1"
@@ -274,6 +274,7 @@ def build_parser(parser=None):
     return parser
 
 
+@tool_main("steg")
 def main(argv=None):
     parser = build_parser()
     args = parser.parse_args(argv)

@@ -7,7 +7,7 @@ import math
 import sys
 from pathlib import Path
 
-from _common import lazy_import
+from _common import lazy_import, tool_main
 
 
 # ---- ONNX ----
@@ -231,6 +231,7 @@ def build_parser(parser=None):
     return parser
 
 
+@tool_main("ml")
 def main(argv=None):
     parser = build_parser()
     args = parser.parse_args(argv)

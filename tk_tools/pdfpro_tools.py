@@ -8,7 +8,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from _common import lazy_import, human_size, ensure_dir, confirm
+from _common import lazy_import, human_size, ensure_dir, confirm, tool_main
 
 
 def cmd_ocr(args):
@@ -325,6 +325,7 @@ def build_parser(parser=None):
     return parser
 
 
+@tool_main("pdf-pro")
 def main(argv=None):
     parser = build_parser()
     args = parser.parse_args(argv)

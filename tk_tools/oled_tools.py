@@ -11,7 +11,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 
-from _common import lazy_import
+from _common import lazy_import, tool_main
 
 
 # Common display profiles. Add/extend freely.
@@ -560,6 +560,7 @@ def build_parser(parser=None):
     return parser
 
 
+@tool_main("oled")
 def main(argv=None):
     parser = build_parser()
     args = parser.parse_args(argv)

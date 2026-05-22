@@ -7,7 +7,7 @@ import sys
 import zlib
 from pathlib import Path
 
-from _common import lazy_import, human_size
+from _common import lazy_import, human_size, tool_main
 
 
 # ---- hexview ----
@@ -365,6 +365,7 @@ def build_parser(parser=None):
     return parser
 
 
+@tool_main("embedded")
 def main(argv=None):
     parser = build_parser()
     args = parser.parse_args(argv)

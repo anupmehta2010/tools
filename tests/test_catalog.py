@@ -64,6 +64,12 @@ def test_module_contract(mod_name):
 
 
 @pytest.mark.parametrize("mod_name", _module_names())
+def test_all_mains_wrapped(mod_name):
+    mod = importlib.import_module(mod_name)
+    assert hasattr(mod.main, "__wrapped__"), f"{mod_name}.main not wrapped with tool_main"
+
+
+@pytest.mark.parametrize("mod_name", _module_names())
 def test_main_empty_argv_no_traceback(mod_name):
     """main([]) must exit cleanly (help or arg error), never raise an unexpected exception."""
     mod = importlib.import_module(mod_name)

@@ -9,7 +9,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from _common import lazy_import
+from _common import lazy_import, tool_main
 
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
@@ -184,6 +184,7 @@ def build_parser(parser=None):
     return parser
 
 
+@tool_main("ai")
 def main(argv=None):
     parser = build_parser()
     args = parser.parse_args(argv)

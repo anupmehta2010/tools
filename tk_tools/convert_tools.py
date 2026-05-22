@@ -11,6 +11,11 @@ import argparse
 import importlib
 from pathlib import Path
 
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parent.parent))
+from _common import tool_main
+
 # Direct routing table.  (src_ext, dst_ext) -> (module, command, args_template)
 ROUTES: dict[tuple[str, str], tuple[str, str, list[str]]] = {
     # PDF / docs
@@ -152,6 +157,7 @@ def build_parser(parser=None):
     return parser
 
 
+@tool_main("convert")
 def main(argv=None):
     parser = build_parser()
     args = parser.parse_args(argv)

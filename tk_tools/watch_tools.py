@@ -17,6 +17,11 @@ import sys
 import time
 from pathlib import Path
 
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parent.parent))
+from _common import tool_main
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 
@@ -129,6 +134,7 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
+@tool_main("watch")
 def main(argv=None) -> int:
     args = build_parser().parse_args(argv)
     return args.func(args) or 0

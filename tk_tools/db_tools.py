@@ -7,7 +7,7 @@ import sqlite3
 import sys
 from pathlib import Path
 
-from _common import human_size
+from _common import human_size, tool_main
 
 
 def _connect(path: str) -> sqlite3.Connection:
@@ -248,6 +248,7 @@ def build_parser(parser=None):
     return parser
 
 
+@tool_main("db")
 def main(argv=None):
     parser = build_parser()
     args = parser.parse_args(argv)

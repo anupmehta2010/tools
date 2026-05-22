@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from http.cookies import SimpleCookie
 from pathlib import Path
 
-from _common import lazy_import, human_size
+from _common import lazy_import, human_size, tool_main
 
 UA = "tk/1.0"
 
@@ -387,6 +387,7 @@ def build_parser(parser=None):
     return parser
 
 
+@tool_main("net-pro")
 def main(argv=None):
     parser = build_parser()
     args = parser.parse_args(argv)

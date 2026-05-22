@@ -7,7 +7,7 @@ import urllib.request
 from pathlib import Path
 from xml.sax.saxutils import escape as xml_escape
 
-from _common import lazy_import, ensure_dir
+from _common import lazy_import, ensure_dir, tool_main
 
 
 _FAVICON_SIZES = [16, 32, 48, 64, 128, 192, 512]
@@ -292,6 +292,7 @@ def build_parser(parser=None):
     return parser
 
 
+@tool_main("gen")
 def main(argv=None):
     parser = build_parser()
     args = parser.parse_args(argv)

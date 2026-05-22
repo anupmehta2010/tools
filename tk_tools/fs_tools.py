@@ -10,7 +10,7 @@ import shutil
 from collections import defaultdict
 from pathlib import Path
 
-from _common import human_size
+from _common import human_size, tool_main
 
 
 def _walk(root, follow_symlinks=False):
@@ -396,6 +396,7 @@ def build_parser(parser=None):
     return parser
 
 
+@tool_main("fs")
 def main(argv=None):
     parser = build_parser()
     args = parser.parse_args(argv)

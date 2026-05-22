@@ -10,7 +10,7 @@ import urllib.request
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from _common import lazy_import, human_size, ensure_dir, confirm
+from _common import lazy_import, human_size, ensure_dir, confirm, tool_main
 
 
 GPX_NS = "http://www.topografix.com/GPX/1/1"
@@ -365,6 +365,7 @@ def build_parser(parser=None):
     return parser
 
 
+@tool_main("geo")
 def main(argv=None):
     parser = build_parser()
     args = parser.parse_args(argv)

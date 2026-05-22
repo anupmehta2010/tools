@@ -26,8 +26,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from _common import (
-    recipe_save, recipe_load, recipe_list, recipe_delete, emit, validate_recipe,
-)
+    recipe_save, recipe_load, recipe_list, recipe_delete, emit, validate_recipe, tool_main,)
 
 
 COMMANDS = {
@@ -346,6 +345,7 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
+@tool_main("recipes")
 def main(argv=None) -> int:
     args = build_parser().parse_args(argv)
     return args.func(args) or 0

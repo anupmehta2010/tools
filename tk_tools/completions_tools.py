@@ -20,6 +20,11 @@ import importlib
 import sys
 from pathlib import Path
 
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parent.parent))
+from _common import tool_main
+
 
 # Meta verbs handled by tk.py itself (top-level, not in CATEGORIES).
 META_COMMANDS = [
@@ -330,6 +335,7 @@ def build_parser(parser: argparse.ArgumentParser | None = None) -> argparse.Argu
     return parser
 
 
+@tool_main("completions")
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)

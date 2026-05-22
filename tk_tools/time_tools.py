@@ -8,7 +8,7 @@ import uuid
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from _common import lazy_import
+from _common import lazy_import, tool_main
 
 
 # ---- Timezone convert ----
@@ -292,6 +292,7 @@ def build_parser(parser=None):
     return parser
 
 
+@tool_main("time")
 def main(argv=None):
     parser = build_parser()
     args = parser.parse_args(argv)

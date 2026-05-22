@@ -12,7 +12,7 @@ from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 
-from _common import lazy_import, human_size, ensure_dir
+from _common import lazy_import, human_size, ensure_dir, tool_main
 
 
 # ---- Magic table ----
@@ -383,6 +383,7 @@ def build_parser(parser=None):
     return parser
 
 
+@tool_main("forensic")
 def main(argv=None):
     parser = build_parser()
     args = parser.parse_args(argv)

@@ -6,7 +6,7 @@ import tarfile
 import zipfile
 from pathlib import Path
 
-from _common import human_size
+from _common import human_size, tool_main
 
 
 def cmd_zip(args):
@@ -122,6 +122,7 @@ def build_parser(parser=None):
     return parser
 
 
+@tool_main("archive")
 def main(argv=None):
     parser = build_parser()
     args = parser.parse_args(argv)
