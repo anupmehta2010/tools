@@ -21,6 +21,63 @@ from pathlib import Path
 from typing import Any, Iterable
 
 
+# ---------------------------------------------------------------- error contract
+
+EXIT_OK = 0
+EXIT_USER_ERROR = 1
+EXIT_BAD_ARGS = 2
+EXIT_MISSING_DEP = 3
+
+
+class TkError(Exception):
+    """A user-facing tool error. Carries a process exit code."""
+
+    def __init__(self, message: str, code: int = EXIT_USER_ERROR):
+        super().__init__(message)
+        self.code = code
+
+
+def _debug_enabled(argv) -> bool:
+    if os.environ.get("TK_DEBUG"):
+        return True
+    return bool(argv) and "--debug" in argv
+
+
+def tool_main(category: str):
+    """Decorate a module `main(argv)` to enforce the tk error contract.
+
+    - TkError       -> its .code, message to stderr as `tk <category>: <msg>`.
+    - SystemExit    -> passed through unchanged (argparse / lazy_import).
+    - KeyboardInterrupt -> exit 130.
+    - other Exception -> EXIT_USER_ERROR, message to stderr; traceback only
+      when --debug is passed or TK_DEBUG is set.
+    """
+    def decorator(func):
+        import functools
+
+        @functools.wraps(func)
+        def wrapper(argv=None):
+            try:
+                return func(argv) or EXIT_OK
+            except TkError as e:
+                print(f"tk {category}: {e}", file=sys.stderr)
+                return e.code
+            except SystemExit:
+                raise
+            except KeyboardInterrupt:
+                return 130
+            except Exception as e:  # noqa: BLE001 - top-level guard
+                if _debug_enabled(argv):
+                    import traceback
+                    traceback.print_exc()
+                print(f"tk {category}: {e}", file=sys.stderr)
+                return EXIT_USER_ERROR
+
+        return wrapper
+
+    return decorator
+
+
 # ---------------------------------------------------------------- import helpers
 
 def lazy_import(module_name: str, install_hint: str | None = None):
@@ -31,7 +88,7 @@ def lazy_import(module_name: str, install_hint: str | None = None):
         hint = install_hint or f"pip install {module_name}"
         print(f"\n[!] Required module '{module_name}' is not installed.")
         print(f"    Install with: {hint}\n")
-        raise SystemExit(2)
+        raise SystemExit(EXIT_MISSING_DEP)
 
 
 def have_module(module_name: str) -> bool:
