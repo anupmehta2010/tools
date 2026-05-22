@@ -514,7 +514,7 @@ THEMES = [
 # ============================================================ HTTP handler
 
 class APIHandler(http.server.BaseHTTPRequestHandler):
-    server_version = "tk/0.2"
+    server_version = "tk/0.3"
 
     def log_message(self, fmt, *args):
         pass

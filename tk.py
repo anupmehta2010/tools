@@ -43,7 +43,7 @@ if sys.platform.startswith("win"):
         pass
 
 
-__version__ = "0.2.0"
+__version__ = "0.3.1"
 
 
 # Built-in categories. Keys are stable URL/CLI slugs; values describe + map.
