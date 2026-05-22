@@ -207,3 +207,28 @@ def test_validate_config_flags_int_for_bool_key():
     cfg["open_browser"] = 1
     warnings = _common.validate_config(cfg)
     assert any("open_browser" in w and "boolean" in w for w in warnings)
+
+
+def test_recipes_validate_cli_good(tmp_path):
+    import json, subprocess
+    recipe = {"name": "ok", "steps": [{"id": "n1", "tool": "dev:calc", "argv": ["2+2"]}]}
+    f = tmp_path / "r.json"
+    f.write_text(json.dumps(recipe), encoding="utf-8")
+    r = subprocess.run(
+        [sys.executable, str(ROOT / "tk.py"), "recipes", "validate", str(f)],
+        capture_output=True, text=True, timeout=60,
+    )
+    assert r.returncode == 0, r.stderr
+    assert "valid" in (r.stdout + r.stderr).lower()
+
+
+def test_recipes_validate_cli_bad(tmp_path):
+    import json, subprocess
+    recipe = {"name": "bad", "steps": [{"id": "n1", "tool": "nope", "argv": []}]}
+    f = tmp_path / "r.json"
+    f.write_text(json.dumps(recipe), encoding="utf-8")
+    r = subprocess.run(
+        [sys.executable, str(ROOT / "tk.py"), "recipes", "validate", str(f)],
+        capture_output=True, text=True, timeout=60,
+    )
+    assert r.returncode == 1

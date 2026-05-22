@@ -26,7 +26,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from _common import (
-    recipe_save, recipe_load, recipe_list, recipe_delete, emit,
+    recipe_save, recipe_load, recipe_list, recipe_delete, emit, validate_recipe,
 )
 
 
@@ -38,6 +38,7 @@ COMMANDS = {
     "run":    "Run a saved recipe by name (with --var key=value pairs)",
     "exec":   "Run a recipe directly from a JSON file (no save)",
     "scaffold": "Print a starter recipe JSON to stdout",
+    "validate": "Validate a recipe JSON file (structure, refs, cycles)",
 }
 
 
@@ -238,6 +239,12 @@ def cmd_run(args):
     if not r:
         print(f"Recipe '{args.name}' not found.")
         return 1
+    problems = validate_recipe(r)
+    if problems:
+        print(f"Recipe '{args.name}' is invalid:")
+        for p in problems:
+            print(f"  - {p}")
+        return 1
     variables = _parse_vars(args.var)
     result = run_recipe(r, variables, emit_event=_print_event)
     return 0 if result["ok"] else 1
@@ -245,6 +252,12 @@ def cmd_run(args):
 
 def cmd_exec(args):
     r = json.loads(Path(args.file).read_text(encoding="utf-8"))
+    problems = validate_recipe(r)
+    if problems:
+        print("Recipe is invalid:")
+        for p in problems:
+            print(f"  - {p}")
+        return 1
     variables = _parse_vars(args.var)
     result = run_recipe(r, variables, emit_event=_print_event)
     return 0 if result["ok"] else 1
@@ -276,6 +289,18 @@ def cmd_scaffold(args):
     }
     print(json.dumps(sample, indent=2))
     return 0
+
+
+def cmd_validate(args):
+    recipe = json.loads(Path(args.file).read_text(encoding="utf-8"))
+    errors = validate_recipe(recipe)
+    if not errors:
+        print(f"Recipe '{recipe.get('name', args.file)}' is valid.")
+        return 0
+    print(f"Recipe has {len(errors)} problem(s):")
+    for e in errors:
+        print(f"  - {e}")
+    return 1
 
 
 # ---------------------------------------------------------------- argparse
@@ -313,6 +338,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     sp = sub.add_parser("scaffold", help=COMMANDS["scaffold"])
     sp.set_defaults(func=cmd_scaffold)
+
+    sp = sub.add_parser("validate", help=COMMANDS["validate"])
+    sp.add_argument("file", help="recipe JSON file")
+    sp.set_defaults(func=cmd_validate)
 
     return p
 
