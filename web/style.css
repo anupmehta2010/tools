@@ -3,6 +3,10 @@
    Dark by default, light theme via [data-theme="light"].
    ========================================================================== */
 
+/* Developer-grade type: Inter for UI, Fira Code for code/CLI.
+   Loaded best-effort; system fonts are the fallback when offline. */
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap');
+
 :root {
   --bg:           #0d1117;
   --bg-elev:      #161b22;
@@ -23,8 +27,8 @@
   --shadow-lg:    0 20px 60px rgba(0,0,0,0.55);
   --radius:       10px;
   --radius-sm:    6px;
-  --mono:         'Cascadia Code', 'Consolas', 'Monaco', 'Courier New', monospace;
-  --sans:         -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, Helvetica, Arial, sans-serif;
+  --mono:         'Fira Code', 'Cascadia Code', 'Consolas', 'Monaco', 'Courier New', monospace;
+  --sans:         'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
 [data-theme="light"] {
@@ -1387,4 +1391,59 @@ kbd {
   .hero { padding: 22px; }
   .hero h1 { font-size: 24px; }
   .hero-actions .btn-secondary { padding: 8px 12px; font-size: 12px; }
+}
+
+/* ==========================================================================
+   Accessibility & polish (global, theme-agnostic)
+   ========================================================================== */
+
+/* Crisper text rendering with the web fonts. */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Single, consistent keyboard focus ring on every interactive element.
+   Mouse clicks stay clean (:focus-visible only fires for keyboard nav). */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Every clickable affordance gets the pointer cursor. */
+button,
+.icon-btn,
+.btn-primary,
+.btn-secondary,
+.chip,
+.tab,
+summary,
+[role="button"] {
+  cursor: pointer;
+}
+button:disabled,
+.btn-primary:disabled,
+.btn-secondary:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/* Honour reduced-motion: kill non-essential animation/transition. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

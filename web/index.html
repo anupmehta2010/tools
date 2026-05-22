@@ -21,21 +21,21 @@
 
     <button type="button" id="search-btn" class="search-btn" title="Search commands  (Ctrl+K)">
       <span class="search-icon">🔍</span>
-      <span class="search-text">Search <strong id="search-cmd-count">127</strong> commands…</span>
+      <span class="search-text">Search <strong id="search-cmd-count">375</strong> commands…</span>
       <span class="kbd"><kbd>Ctrl</kbd>+<kbd>K</kbd></span>
     </button>
 
     <div class="actions">
-      <button type="button" id="history-btn" class="icon-btn" title="Run history (Y)">
-        <span>⏱</span><span class="badge" id="history-count">0</span>
+      <button type="button" id="history-btn" class="icon-btn" title="Run history (Y)" aria-label="Run history">
+        <span aria-hidden="true">⏱</span><span class="badge" id="history-count">0</span>
       </button>
-      <button type="button" id="shortcuts-btn" class="icon-btn" title="Keyboard shortcuts (?)">⌨</button>
-      <button type="button" id="pipeline-btn" class="icon-btn" title="Pipeline editor (P)">🧬</button>
-      <button type="button" id="ai-btn" class="icon-btn" title="AI assistant (A)">🤖</button>
-      <button type="button" id="theme-toggle" class="icon-btn" title="Theme picker (T)">🌙</button>
-      <button type="button" id="doctor-btn" class="icon-btn" title="Doctor: check optional deps (Ctrl+Shift+D)" onclick="showDoctor()">🩺</button>
-      <button type="button" id="files-btn" class="icon-btn" title="Workspace files (W)">
-        <span>📁</span><span class="badge" id="file-count">0</span>
+      <button type="button" id="shortcuts-btn" class="icon-btn" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts"><span aria-hidden="true">⌨</span></button>
+      <button type="button" id="pipeline-btn" class="icon-btn" title="Pipeline editor (P)" aria-label="Pipeline editor"><span aria-hidden="true">🧬</span></button>
+      <button type="button" id="ai-btn" class="icon-btn" title="AI assistant (A)" aria-label="AI assistant"><span aria-hidden="true">🤖</span></button>
+      <button type="button" id="theme-toggle" class="icon-btn" title="Theme picker (T)" aria-label="Theme picker"><span aria-hidden="true">🌙</span></button>
+      <button type="button" id="doctor-btn" class="icon-btn" title="Doctor: check optional deps (Ctrl+Shift+D)" aria-label="Doctor: check optional dependencies" onclick="showDoctor()"><span aria-hidden="true">🩺</span></button>
+      <button type="button" id="files-btn" class="icon-btn" title="Workspace files (W)" aria-label="Workspace files">
+        <span aria-hidden="true">📁</span><span class="badge" id="file-count">0</span>
       </button>
     </div>
   </header>
@@ -45,9 +45,9 @@
       <ul id="categories" class="cat-list"></ul>
       <div class="sidebar-foot">
         <div class="foot-stats">
-          <strong id="foot-cmd-count">127</strong> commands
+          <strong id="foot-cmd-count">375</strong> commands
           <span class="dot">·</span>
-          <strong id="foot-cat-count">12</strong> categories
+          <strong id="foot-cat-count">37</strong> categories
         </div>
         <span class="muted small">Drop files anywhere to upload</span>
       </div>
@@ -58,7 +58,7 @@
         <div class="hero">
           <div class="hero-bg"></div>
           <h1>Personal Toolkit</h1>
-          <p>One unified UI over <strong id="cat-count">12</strong> categories, <strong id="cmd-count">127</strong> commands — PDFs, images, audio/video, encodings, data conversion, archives, crypto, network, filesystem, dev utilities, QR codes, and embedded OLED displays.</p>
+          <p>One unified UI over <strong id="cat-count">37</strong> categories, <strong id="cmd-count">375</strong> commands — PDFs, images, audio/video, downloads, encodings, data conversion, archives, crypto, network, filesystem, dev utilities, QR codes, embedded/OLED, forensics, ML, 3D, and more.</p>
           <div class="hero-actions">
             <button id="hero-search" class="btn-primary">⌘ Search commands…</button>
             <button id="hero-upload" class="btn-secondary">📤 Upload Files</button>
@@ -247,7 +247,7 @@
     <div class="tour-step" data-step="1">
       <div class="tour-icon">⚡</div>
       <h2>Welcome to tk</h2>
-      <p>One web UI over <strong id="tour-cmd-count">172</strong> CLI commands across <strong id="tour-cat-count">13</strong> categories. Convert any file to anything, manipulate PDFs, generate QR codes, build C arrays for OLED screens, and a lot more.</p>
+      <p>One web UI over <strong id="tour-cmd-count">375</strong> CLI commands across <strong id="tour-cat-count">37</strong> categories. Convert any file to anything, download video/audio, manipulate PDFs, generate QR codes, build C arrays for OLED screens, and a lot more.</p>
     </div>
     <div class="tour-step hidden" data-step="2">
       <div class="tour-icon">⌨</div>
