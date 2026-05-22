@@ -254,7 +254,7 @@ def cmd_exec(args):
     r = json.loads(Path(args.file).read_text(encoding="utf-8"))
     problems = validate_recipe(r)
     if problems:
-        print("Recipe is invalid:")
+        print(f"Recipe '{args.file}' is invalid:")
         for p in problems:
             print(f"  - {p}")
         return 1

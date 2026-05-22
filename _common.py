@@ -427,14 +427,12 @@ def validate_recipe(recipe: dict) -> list[str]:
         if not isinstance(step, dict):
             errors.append(f"{where}: must be an object")
             continue
-        sid = step.get("id")
-        if not sid:
-            errors.append(f"{where}: missing 'id'")
-        else:
-            where = f"step '{sid}'"
-            if sid in ids:
-                errors.append(f"{where}: duplicate id")
-            ids.append(sid)
+        explicit_id = step.get("id")
+        sid = explicit_id if explicit_id else f"s{i}"
+        where = f"step '{sid}'"
+        if explicit_id and explicit_id in ids:
+            errors.append(f"{where}: duplicate id")
+        ids.append(sid)
 
         tool = step.get("tool") or ""
         if ":" not in tool:
@@ -448,30 +446,33 @@ def validate_recipe(recipe: dict) -> list[str]:
             errors.append(f"{where}: needs 'argv' or 'args'")
 
     id_set = set(ids)
-    for step in steps:
+    # Build a mapping from synthesized id -> step for depends/cycle checks.
+    sid_map = {ids[i]: s for i, s in enumerate(steps) if isinstance(s, dict)}
+    for j, step in enumerate(steps):
         if not isinstance(step, dict):
             continue
-        sid = step.get("id", "?")
+        sid = ids[j]
         for dep in step.get("depends", []) or []:
             if dep not in id_set:
                 errors.append(f"step '{sid}': depends on unknown step '{dep}'")
 
     # Cycle detection (Kahn's algorithm over the declared edges).
-    indeg = {s.get("id"): 0 for s in steps if isinstance(s, dict) and s.get("id")}
-    for s in steps:
+    indeg = {sid: 0 for sid in ids}
+    for j, s in enumerate(steps):
         if not isinstance(s, dict):
             continue
+        sid = ids[j]
         for dep in s.get("depends", []) or []:
-            if s.get("id") in indeg and dep in indeg:
-                indeg[s["id"]] += 1
+            if dep in indeg:
+                indeg[sid] += 1
     q = deque([k for k, v in indeg.items() if v == 0])
     seen = 0
     while q:
         cur = q.popleft()
         seen += 1
-        for s in steps:
+        for j, s in enumerate(steps):
             if isinstance(s, dict) and cur in (s.get("depends", []) or []):
-                tgt = s.get("id")
+                tgt = ids[j]
                 if tgt in indeg:
                     indeg[tgt] -= 1
                     if indeg[tgt] == 0:

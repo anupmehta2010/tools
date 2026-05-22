@@ -232,3 +232,23 @@ def test_recipes_validate_cli_bad(tmp_path):
         capture_output=True, text=True, timeout=60,
     )
     assert r.returncode == 1
+    assert "problem" in r.stdout.lower() or "invalid" in r.stdout.lower()
+
+
+def test_validate_recipe_allows_missing_ids():
+    """Runtime _topo_sort tolerates steps without 'id'; validation must too."""
+    import _common
+    recipe = {"name": "ok", "steps": [{"tool": "dev:calc", "argv": ["2+2"]}]}
+    assert _common.validate_recipe(recipe) == []
+
+
+def test_validate_recipe_still_flags_duplicate_explicit_ids():
+    import _common
+    errs = _common.validate_recipe({
+        "name": "x",
+        "steps": [
+            {"id": "a", "tool": "dev:calc", "argv": []},
+            {"id": "a", "tool": "dev:slug", "argv": ["hi"]},
+        ],
+    })
+    assert any("duplicate" in e for e in errs)
